@@ -30,10 +30,11 @@ jobs:
           go install github.com/go-semantic-release/semantic-release/cmd/semantic-release@v1.20.1
           echo "${HOME}/go/bin" >> $GITHUB_PATH
 
-      - name: Run go-semantic-release (auto‑tag & release notes)
+      - name: Run go-semantic-release (auto-tag & release notes)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release
+        run: |
+          semantic-release || test $? -eq 65
 
   goreleaser:
     if: github.event_name == 'release'
