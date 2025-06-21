@@ -169,6 +169,28 @@ Errors (2):
 4. Add tests
 5. Submit a pull request
 
+### Commit Message Guidelines (Conventional Commits)
+
+This project uses [semantic-release](https://semantic-release.gitbook.io/) for automated versioning and changelog generation. To ensure your contributions are included in releases, **please follow the [Conventional Commits](https://www.conventionalcommits.org/) specification** for your commit messages:
+
+- **feat:** A new feature
+- **fix:** A bug fix
+- **docs:** Documentation only changes
+- **style:** Changes that do not affect the meaning of the code (white-space, formatting, etc)
+- **refactor:** A code change that neither fixes a bug nor adds a feature
+- **perf:** A code change that improves performance
+- **test:** Adding or correcting tests
+- **chore:** Changes to the build process or auxiliary tools
+
+**Examples:**
+```
+feat: add streaming support for stdin
+fix: handle empty CSV rows gracefully
+docs: update usage examples in README
+```
+
+See the [Conventional Commits documentation](https://www.conventionalcommits.org/) for more details.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details. 
