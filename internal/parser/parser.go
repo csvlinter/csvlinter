@@ -107,7 +107,6 @@ func (p *Parser) ValidateUTF8() error {
 
 	// Recreate reader after seeking
 	p.reader = csv.NewReader(p.file)
-	p.reader.Comma = p.reader.Comma
 	p.reader.FieldsPerRecord = -1
 
 	return nil
