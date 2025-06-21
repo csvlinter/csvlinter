@@ -25,8 +25,8 @@ jobs:
 
       - name: Install go-semantic-release
         run: |
-          go install github.com/go-semantic-release/semantic-release/cmd/semantic-release@v1.20.1/semantic-release/releases/download/v1.20.1/semantic-release_1.20.1_linux_amd64.tar.gz | tar xz
-          sudo mv semantic-release /usr/local/bin
+          go install github.com/go-semantic-release/semantic-release/cmd/semantic-release@v1.20.1
+          echo "${HOME}/go/bin" >> $GITHUB_PATH
 
       - name: Run go-semantic-release
         env:
