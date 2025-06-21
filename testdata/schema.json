@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Full name of the person"
+    },
+    "age": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Age as a number"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Valid email address"
+    },
+    "city": {
+      "type": "string",
+      "minLength": 1,
+      "description": "City name"
+    }
+  },
+  "required": [
+    "name",
+    "age",
+    "email",
+    "city"
+  ],
+  "additionalProperties": false
+}
