@@ -23,9 +23,14 @@ jobs:
       should_release: ${{ steps.release.outputs.version != '' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Evaluate next release version
         id: release
         uses: Sujimoshi/semantic-release-action@v1.8.0
+        with:
+          branches: |
+            main
 
   release:
     needs: calculate-version
