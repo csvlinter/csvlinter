@@ -12,5 +12,3 @@ archives:
   - id: binaries
     format: tar.gz
     name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
-    files:
-      - csvlinter
