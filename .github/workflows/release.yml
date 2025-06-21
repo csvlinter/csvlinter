@@ -1,13 +1,25 @@
 name: Release
 
+# This workflow is responsible for creating and publishing new releases.
+# It runs in two distinct stages, triggered by different events:
+#
+# 1. Tagging: When a commit is pushed to `main`, the `tag` job runs.
+#    It uses `go-semantic-release` to determine the next version number,
+#    creates a corresponding Git tag (e.g., v1.2.3), and pushes it.
+#
+# 2. Releasing: The push of a new version tag triggers a *new* workflow run.
+#    In this second run, only the `goreleaser` job executes, building the
+#    binaries and creating a GitHub Release.
+
 on:
   push:
     branches: [main]
     tags:
-      - 'v*'  # Run goreleaser on version tags
+      - 'v*'
 
 jobs:
   tag:
+    # This job only runs on pushes to the main branch.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -35,12 +47,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          result=$(semantic-release || test $? -eq 65)
-          echo "tag=$(echo "$result" | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+')" >> $GITHUB_OUTPUT
+          semantic-release || test $? -eq 65  # prevent fail if no release needed
 
   goreleaser:
-    needs: tag
-    if: needs.tag.outputs.tag != ''
+    # This job only runs when a version tag (e.g., v1.2.3) is pushed.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
