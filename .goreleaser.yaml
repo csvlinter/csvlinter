@@ -1,6 +1,6 @@
 builds:
   - id: csvlinter
-    main: ./cmd/csvlinter
+    main: ./main.go
     binary: csvlinter
     goos: [darwin, linux, windows]
     goarch: [amd64, arm64]
