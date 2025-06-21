@@ -1,0 +1,16 @@
+builds:
+  - id: csvlinter
+    main: ./cmd/csvlinter
+    binary: csvlinter
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    # optional: disable CGO for static binaries
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - id: binaries
+    format: tar.gz
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+    files:
+      - csvlinter
