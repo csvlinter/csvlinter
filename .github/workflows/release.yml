@@ -25,7 +25,8 @@ jobs:
 
       - name: Install go-semantic-release
         run: |
-          curl -sSfL https://raw.githubusercontent.com/go-semantic-release/semantic-release/master/install.sh | sh -s -- -b /usr/local/bin v1.20.1
+          curl -L https://github.com/go-semantic-release/semantic-release/releases/download/v1.20.1/semantic-release_1.20.1_linux_amd64.tar.gz | tar xz
+          sudo mv semantic-release /usr/local/bin
 
       - name: Run go-semantic-release
         env:
