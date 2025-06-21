@@ -14,61 +14,43 @@ name: Release
 on:
   push:
     branches: [main]
-    tags:
-      - 'v*'
 
 jobs:
-  tag:
-    # This job only runs on pushes to the main branch.
-    if: github.ref == 'refs/heads/main'
+  calculate-version:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      should_release: ${{ steps.release.outputs.version != '' }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
+      - name: Evaluate next release version
+        id: release
+        uses: Sujimoshi/semantic-release-action@v1
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-
-      - name: Install go-semantic-release
-        run: |
-          go install github.com/go-semantic-release/semantic-release/cmd/semantic-release@v1.20.1
-          echo "${HOME}/go/bin" >> $GITHUB_PATH
-
-      - name: Run go-semantic-release (tag + release)
-        id: semantic
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          semantic-release || test $? -eq 65  # prevent fail if no release needed
-
-  goreleaser:
-    # This job only runs when a version tag (e.g., v1.2.3) is pushed.
-    if: startsWith(github.ref, 'refs/tags/v')
+  release:
+    needs: calculate-version
+    if: needs.calculate-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+      
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
+      - name: Create Git Tag
+        run: |
+          git tag "v${{ needs.calculate-version.outputs.version }}"
+          git push origin "v${{ needs.calculate-version.outputs.version }}"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
+          # The 'release' command will pick up the latest tag automatically
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
