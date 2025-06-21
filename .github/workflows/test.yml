@@ -32,9 +32,9 @@ jobs:
 
     - name: Test CSV validation
       run: |
-        ./csvlinter validate testdata/sample.csv
-        ./csvlinter validate testdata/sample.csv --schema testdata/schema.json
-        ./csvlinter validate testdata/sample.csv --format json
+        ./csvlinter validate testdata/valid_sample.csv
+        ./csvlinter validate testdata/valid_sample.csv --schema testdata/schema.json
+        ./csvlinter validate testdata/valid_sample.csv --format json
 
   lint:
     runs-on: ubuntu-latest
