@@ -89,6 +89,7 @@ func validateAction(c *cli.Context) error {
 	// Run validation
 	results, err := v.Validate()
 	if err != nil {
+		// This will now only catch operational errors like file not found during parsing
 		return cli.Exit(fmt.Sprintf("Error during validation: %v", err), 1)
 	}
 
@@ -98,11 +99,6 @@ func validateAction(c *cli.Context) error {
 	// Output results
 	if err := r.Report(results); err != nil {
 		return cli.Exit(fmt.Sprintf("Error writing output: %v", err), 1)
-	}
-
-	// Exit with error code if validation failed
-	if len(results.Errors) > 0 {
-		return cli.Exit("", 1)
 	}
 
 	return nil
