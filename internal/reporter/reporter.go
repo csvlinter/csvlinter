@@ -3,6 +3,7 @@ package reporter
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -28,7 +29,7 @@ func New(format, outputPath string) *Reporter {
 }
 
 // Report outputs the validation results
-func (r *Reporter) Report(results *validator.Results) error {
+func (r *Reporter) Report(results *validator.Results, writer io.Writer) error {
 	var output string
 	var err error
 
@@ -45,13 +46,17 @@ func (r *Reporter) Report(results *validator.Results) error {
 		return fmt.Errorf("failed to format output: %w", err)
 	}
 
+	if writer == nil {
+		writer = os.Stdout
+	}
+
 	// Write to file or stdout
 	if r.outputPath != "" {
 		if err := os.WriteFile(r.outputPath, []byte(output), 0644); err != nil {
 			return fmt.Errorf("failed to write output file: %w", err)
 		}
 	} else {
-		fmt.Print(output)
+		fmt.Fprint(writer, output)
 	}
 
 	return nil
