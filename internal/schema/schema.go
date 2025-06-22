@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
@@ -52,10 +53,30 @@ func (v *Validator) ValidateRow(headers []string, data []string) ([]ValidationEr
 		}}, nil
 	}
 
-	// Convert row to JSON object
+	// Convert row to a map and attempt to convert types based on schema
 	rowData := make(map[string]interface{})
 	for i, header := range headers {
-		rowData[header] = data[i]
+		// Default to string
+		var value interface{} = data[i]
+
+		// Check schema for type information
+		if prop, ok := v.schema.Properties[header]; ok {
+			// A property can have multiple types, e.g., ["number", "null"]
+			for _, t := range prop.Types {
+				if t == "integer" {
+					if v, err := strconv.Atoi(data[i]); err == nil {
+						value = v
+						break
+					}
+				} else if t == "number" {
+					if v, err := strconv.ParseFloat(data[i], 64); err == nil {
+						value = v
+						break
+					}
+				}
+			}
+		}
+		rowData[header] = value
 	}
 
 	// Validate against schema
@@ -74,39 +95,26 @@ func (v *Validator) convertValidationErrors(err *jsonschema.ValidationError, dat
 	var errors []ValidationError
 
 	if err.InstanceLocation != "" {
-		// Extract field name from instance location
-		field := err.InstanceLocation
-		if field[0] == '/' {
-			field = field[1:]
-		}
+		// Extract field name from instance location (e.g., "/email")
+		field := strings.TrimPrefix(err.InstanceLocation, "/")
 
-		value := ""
+		// Find the original string value for reporting
+		originalValue := ""
 		if val, exists := data[field]; exists {
-			if str, ok := val.(string); ok {
-				value = str
-			}
+			originalValue = fmt.Sprintf("%v", val)
 		}
 
 		errors = append(errors, ValidationError{
 			Field:   field,
 			Message: err.Message,
-			Value:   value,
+			Value:   originalValue,
 		})
 	}
 
-	// Recursively process nested errors
-	for _, nestedErr := range err.Causes {
-		errors = append(errors, v.convertValidationErrors(nestedErr, data)...)
+	// Recursively process nested validation errors
+	for _, cause := range err.Causes {
+		errors = append(errors, v.convertValidationErrors(cause, data)...)
 	}
 
 	return errors
-}
-
-// GetSchemaInfo returns basic information about the schema
-func (v *Validator) GetSchemaInfo() (map[string]interface{}, error) {
-	// This is a simplified version - in a real implementation you might want
-	// to extract more detailed schema information
-	return map[string]interface{}{
-		"type": "json-schema",
-	}, nil
 }

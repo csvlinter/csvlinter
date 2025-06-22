@@ -24,6 +24,22 @@ type Row struct {
 	Headers    []string
 }
 
+// IsEmpty checks if all fields in the row are empty
+func (r *Row) IsEmpty() bool {
+	if len(r.Data) == 0 {
+		return true
+	}
+	if len(r.Data) == 1 && r.Data[0] == "" {
+		return true
+	}
+	for _, field := range r.Data {
+		if field != "" {
+			return false
+		}
+	}
+	return true
+}
+
 // NewParser creates a new CSV parser
 func NewParser(filePath, delimiter string) (*Parser, error) {
 	file, err := os.Open(filePath)

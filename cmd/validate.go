@@ -97,7 +97,7 @@ func validateAction(c *cli.Context) error {
 	r := reporter.New(format, outputPath)
 
 	// Output results
-	if err := r.Report(results); err != nil {
+	if err := r.Report(results, c.App.Writer); err != nil {
 		return cli.Exit(fmt.Sprintf("Error writing output: %v", err), 1)
 	}
 

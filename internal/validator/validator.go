@@ -102,6 +102,11 @@ func (v *Validator) Validate() (*Results, error) {
 			break
 		}
 
+		// Skip empty rows, often caused by trailing newlines
+		if row.IsEmpty() {
+			continue
+		}
+
 		totalRows++
 
 		// Basic structure validation
