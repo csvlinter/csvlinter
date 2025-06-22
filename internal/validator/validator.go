@@ -93,7 +93,13 @@ func (v *Validator) Validate() (*Results, error) {
 			if err.Error() == "EOF" {
 				break
 			}
-			return nil, fmt.Errorf("failed to read row: %w", err)
+			// This is a fatal parsing error. Report it and stop processing.
+			errors = append(errors, Error{
+				LineNumber: p.GetLineNumber() + 1, // Error occurs on the next line
+				Message:    err.Error(),
+				Type:       "structure",
+			})
+			break
 		}
 
 		totalRows++
