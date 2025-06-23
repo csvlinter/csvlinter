@@ -30,6 +30,10 @@ func New(format, outputPath string) *Reporter {
 
 // Report outputs the validation results
 func (r *Reporter) Report(results *validator.Results, writer io.Writer) error {
+	if results == nil {
+		return fmt.Errorf("results cannot be nil")
+	}
+
 	var output string
 	var err error
 
@@ -56,7 +60,9 @@ func (r *Reporter) Report(results *validator.Results, writer io.Writer) error {
 			return fmt.Errorf("failed to write output file: %w", err)
 		}
 	} else {
-		fmt.Fprint(writer, output)
+		if _, err := fmt.Fprint(writer, output); err != nil {
+			return fmt.Errorf("failed to write output: %w", err)
+		}
 	}
 
 	return nil
@@ -119,7 +125,7 @@ func (r *Reporter) formatPretty(results *validator.Results) (string, error) {
 				sb.WriteString("\033[31m") // Red
 			}
 			sb.WriteString(fmt.Sprintf("  %d. Line %d", i+1, err.LineNumber))
-			if err.Field != "" && err.Field != "row" {
+			if err.Field != "" {
 				sb.WriteString(fmt.Sprintf(" (%s)", err.Field))
 			}
 			sb.WriteString(fmt.Sprintf(": %s", err.Message))

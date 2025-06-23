@@ -2,6 +2,7 @@ package validator
 
 import (
 	"fmt"
+	"io"
 	"time"
 
 	"csvlinter/internal/parser"
@@ -39,16 +40,18 @@ type Results struct {
 
 // Validator represents the main validation engine
 type Validator struct {
-	filePath        string
+	input           io.Reader
+	name            string
 	delimiter       string
 	schemaValidator *schema.Validator
 	failFast        bool
 }
 
 // New creates a new validator
-func New(filePath, delimiter string, schemaValidator *schema.Validator, failFast bool) *Validator {
+func New(input io.Reader, name string, delimiter string, schemaValidator *schema.Validator, failFast bool) *Validator {
 	return &Validator{
-		filePath:        filePath,
+		input:           input,
+		name:            name,
 		delimiter:       delimiter,
 		schemaValidator: schemaValidator,
 		failFast:        failFast,
@@ -60,7 +63,7 @@ func (v *Validator) Validate() (*Results, error) {
 	startTime := time.Now()
 
 	// Create parser
-	p, err := parser.NewParser(v.filePath, v.delimiter)
+	p, err := parser.NewParser(v.input, v.delimiter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create parser: %w", err)
 	}
@@ -69,7 +72,7 @@ func (v *Validator) Validate() (*Results, error) {
 	// Validate UTF-8 encoding
 	if err := p.ValidateUTF8(); err != nil {
 		return &Results{
-			File:     v.filePath,
+			File:     v.name,
 			Valid:    false,
 			Errors:   []Error{{Message: err.Error(), Type: "encoding"}},
 			Duration: time.Since(startTime).String(),
@@ -90,7 +93,7 @@ func (v *Validator) Validate() (*Results, error) {
 	for {
 		row, err := p.ReadRow()
 		if err != nil {
-			if err.Error() == "EOF" {
+			if err == io.EOF {
 				break
 			}
 			// This is a fatal parsing error. Report it and stop processing.
@@ -147,7 +150,7 @@ func (v *Validator) Validate() (*Results, error) {
 	valid := len(errors) == 0
 
 	return &Results{
-		File:       v.filePath,
+		File:       v.name,
 		TotalRows:  totalRows,
 		Errors:     errors,
 		Warnings:   warnings,

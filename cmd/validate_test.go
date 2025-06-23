@@ -104,6 +104,21 @@ invalid,Jane Doe,jane.doe@example.com`)
 			expectedExit: 1,
 			expectError:  true,
 		},
+		{
+			name:         "STDIN input with JSON output",
+			args:         []string{"--format", "json", "-"},
+			expectedExit: 0,
+			expectError:  false,
+			assertOutput: func(t *testing.T, output string) {
+				var results validator.Results
+				if err := json.Unmarshal([]byte(output), &results); err != nil {
+					t.Fatalf("Failed to unmarshal JSON output: %v", err)
+				}
+				if results.File != "STDIN" {
+					t.Errorf("Expected file name to be STDIN, got %s", results.File)
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -128,6 +143,29 @@ invalid,Jane Doe,jane.doe@example.com`)
 						fmt.Fprintln(c.App.ErrWriter, err)
 					}
 				},
+			}
+
+			// If testing STDIN, set up a pipe
+			if tc.name == "STDIN input with JSON output" {
+				// Save original stdin
+				oldStdin := os.Stdin
+				defer func() { os.Stdin = oldStdin }()
+
+				// Create a pipe
+				r, w, err := os.Pipe()
+				if err != nil {
+					t.Fatalf("Failed to create pipe: %v", err)
+				}
+
+				// Set stdin to read end of pipe
+				os.Stdin = r
+
+				// Write test data to pipe
+				go func() {
+					defer w.Close()
+					fmt.Fprintln(w, "name,email")
+					fmt.Fprintln(w, "John Doe,john@example.com")
+				}()
 			}
 
 			// Run the command

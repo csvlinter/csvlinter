@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -81,6 +82,41 @@ func TestValidateCommand_SchemaResolution(t *testing.T) {
 			// structure valid, schema skipped -> no errors
 			if len(res.Errors) != 0 {
 				t.Errorf("expected 0 errors w/o schema, got %d", len(res.Errors))
+			}
+		})
+	})
+
+	t.Run("STDIN with schema", func(t *testing.T) {
+		dir := t.TempDir()
+		schema := filepath.Join(dir, "stdin.schema.json")
+		mkTempSchema(schema)
+
+		// Save original stdin
+		oldStdin := os.Stdin
+		defer func() { os.Stdin = oldStdin }()
+
+		// Create a pipe
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("Failed to create pipe: %v", err)
+		}
+
+		// Set stdin to read end of pipe
+		os.Stdin = r
+
+		// Write test data to pipe in a goroutine
+		go func() {
+			defer w.Close()
+			fmt.Fprintln(w, "id,name")
+			fmt.Fprintln(w, "1,Alice")
+		}()
+
+		runValidateAndAssertJSON(t, "-", 0, func(res validator.Results) {
+			if res.File != "STDIN" {
+				t.Errorf("expected file name to be STDIN, got %s", res.File)
+			}
+			if len(res.Errors) != 0 {
+				t.Errorf("expected 0 errors, got %d", len(res.Errors))
 			}
 		})
 	})
