@@ -33,15 +33,18 @@ go install github.com/yourusername/csvlinter@latest
 ### Basic Validation
 
 ```bash
-# Validate a CSV file
+# Validate a CSV file (auto-detects schema if not provided)
 csvlinter validate data.csv
 
-# Validate with custom delimiter
-csvlinter validate data.csv --delimiter ";"
+# Validate with custom delimiter (short flag)
+csvlinter validate data.csv -d ";"
 
-# Validate with JSON Schema
-csvlinter validate data.csv --schema schema.json
+# Validate with JSON Schema (short flag)
+csvlinter validate data.csv -s schema.json
 ```
+
+> **Schema Fallback:**
+> If `--schema`/`-s` is not set, csvlinter will look for `<csv>.schema.json` or `csvlinter.schema.json` in the same or parent directories automatically.
 
 ### Output Options
 
@@ -49,12 +52,15 @@ csvlinter validate data.csv --schema schema.json
 # Pretty output (default)
 csvlinter validate data.csv --format pretty
 
-# JSON output
-csvlinter validate data.csv --format json
+# JSON output (short flag)
+csvlinter validate data.csv -f json
 
-# Save results to file
-csvlinter validate data.csv --output results.json --format json
+# Save results to file (short flag)
+csvlinter validate data.csv -o results.json -f json
 ```
+
+> **Output File:**
+> If `--output`/`-o` is set, results are written to the specified file. Otherwise, output is printed to the terminal.
 
 ### CI/CD Integration
 
@@ -97,6 +103,10 @@ Then validate your CSV:
 ```bash
 csvlinter validate users.csv --schema user-schema.json
 ```
+
+### Schema Resolution:
+
+When you do not specify a schema file with `--schema` or `-s`, csvlinter will attempt to automatically resolve the schema by searching for a file named `<csv>.schema.json` (where `<csv>` is your CSV filename) in the same directory as your CSV file. If not found, it will look for a file named `csvlinter.schema.json` in the same directory and then recursively in each parent directory until it reaches the root. This allows for both file-specific and project-wide schema validation without needing to always specify the schema path.
 
 ## Examples
 
