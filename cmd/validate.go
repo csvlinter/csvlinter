@@ -19,7 +19,7 @@ var validateCommand = &cli.Command{
 		&cli.StringFlag{
 			Name:    "schema",
 			Aliases: []string{"s"},
-			Usage:   "Path to JSON Schema file",
+			Usage:   "Path to JSON Schema file. If not set, will look for <csv>.schema.json or csvlinter.schema.json in the same or parent directories (see docs)",
 		},
 		&cli.StringFlag{
 			Name:    "output",
@@ -62,6 +62,11 @@ func validateAction(c *cli.Context) error {
 	// Validate input file exists
 	if _, err := os.Stat(csvPath); os.IsNotExist(err) {
 		return cli.Exit(fmt.Sprintf("Error: CSV file '%s' does not exist", csvPath), 1)
+	}
+
+	// Schema fallback logic
+	if schemaPath == "" {
+		schemaPath = schema.ResolveSchema(csvPath)
 	}
 
 	// Validate schema file if provided
