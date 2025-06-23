@@ -5,6 +5,7 @@ A modern, streaming-first CSV validator with JSON Schema support. Validates stru
 ## Features
 
 - **Streaming Validation**: Processes large CSV files efficiently without loading everything into memory
+- **STDIN Support**: Process data directly from standard input
 - **JSON Schema Support**: Validate CSV data against JSON Schema specifications
 - **UTF-8 Encoding Validation**: Ensures proper character encoding
 - **Flexible Delimiters**: Support for custom delimiter characters
@@ -36,11 +37,20 @@ go install github.com/yourusername/csvlinter@latest
 # Validate a CSV file (auto-detects schema if not provided)
 csvlinter validate data.csv
 
+# Validate data from STDIN (use "-" as input)
+cat data.csv | csvlinter validate -
+
 # Validate with custom delimiter (short flag)
 csvlinter validate data.csv -d ";"
 
+# Validate STDIN with custom delimiter
+cat data.csv | csvlinter validate - -d ";"
+
 # Validate with JSON Schema (short flag)
 csvlinter validate data.csv -s schema.json
+
+# Validate STDIN with JSON Schema
+cat data.csv | csvlinter validate - -s schema.json
 ```
 
 > **Schema Fallback:**
@@ -71,6 +81,24 @@ csvlinter validate data.csv --fail-fast
 # Exit with error code on validation failure
 csvlinter validate data.csv || exit 1
 ```
+
+### STDIN Support
+
+csvlinter supports reading data from standard input using `-` as the input file:
+
+```bash
+# Basic STDIN validation
+cat data.csv | csvlinter validate -
+
+# Pipeline integration
+generate-csv | csvlinter validate - --fail-fast
+
+# Process with custom options
+cat data.csv | csvlinter validate - -d ";" -s schema.json
+```
+
+> **Size Limit:**
+> STDIN input is limited to 10MB by default. Use `--max-size` flag to adjust this limit (e.g., `--max-size 50MB`).
 
 ## JSON Schema Support
 
@@ -106,7 +134,10 @@ csvlinter validate users.csv --schema user-schema.json
 
 ### Schema Resolution:
 
-When you do not specify a schema file with `--schema` or `-s`, csvlinter will attempt to automatically resolve the schema by searching for a file named `<csv>.schema.json` (where `<csv>` is your CSV filename) in the same directory as your CSV file. If not found, it will look for a file named `csvlinter.schema.json` in the same directory and then recursively in each parent directory until it reaches the root. This allows for both file-specific and project-wide schema validation without needing to always specify the schema path.
+When you do not specify a schema file with `--schema` or `-s`, csvlinter will attempt to automatically resolve the schema by searching for a file named `<csv>.schema.json` (where `<csv>` is your CSV filename) in the same directory as your CSV file. If not found, it will look for a file named `csvlinter.schema.json` in the same directory and then recursively in each parent directory until it reaches the root.
+
+> **Note for STDIN:**
+> When using STDIN input (`-`), automatic schema resolution is disabled. You must explicitly provide a schema file using the `--schema` or `-s` flag if validation against a schema is required.
 
 ## Examples
 
@@ -117,11 +148,31 @@ John Doe,30,john@example.com
 Jane Smith,25,jane@example.com
 ```
 
+Example validation:
+```bash
+# File input
+csvlinter validate users.csv
+
+# STDIN input
+echo "name,age,email
+John Doe,30,john@example.com
+Jane Smith,25,jane@example.com" | csvlinter validate -
+```
+
 ### Invalid CSV (missing column)
 ```csv
 name,age
 John Doe,30
 Jane Smith,25,extra-column
+```
+
+Example validation:
+```bash
+# File input
+csvlinter validate invalid.csv
+
+# STDIN input
+cat invalid.csv | csvlinter validate - --fail-fast
 ```
 
 ## Output Formats

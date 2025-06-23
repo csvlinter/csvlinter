@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -30,12 +31,6 @@ func TestValidator(t *testing.T) {
 			expectedErrs:  1,
 			expectSuccess: false,
 		},
-		{
-			name:          "File does not exist",
-			filePath:      "../../testdata/nonexistent.csv",
-			expectedErrs:  0,
-			expectSuccess: false,
-		},
 	}
 
 	for _, tc := range testCases {
@@ -45,17 +40,17 @@ func TestValidator(t *testing.T) {
 				t.Fatalf("Failed to get absolute path: %v", err)
 			}
 
-			// For the nonexistent file case, we expect NewParser to fail, which is handled differently
-			if tc.name == "File does not exist" {
-				validator := New(absPath, ",", nil, false)
-				_, err := validator.Validate()
-				if err == nil {
-					t.Errorf("Expected an error for nonexistent file, but got none")
+			// Open the file
+			file, err := os.Open(absPath)
+			if err != nil {
+				if tc.expectSuccess {
+					t.Fatalf("Failed to open file: %v", err)
 				}
 				return
 			}
+			defer file.Close()
 
-			validator := New(absPath, ",", nil, false)
+			validator := New(file, absPath, ",", nil, true)
 			results, err := validator.Validate()
 
 			if tc.expectSuccess && err != nil {

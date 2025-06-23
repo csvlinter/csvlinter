@@ -1,20 +1,20 @@
 package parser
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"io"
-	"os"
 	"unicode/utf8"
 )
 
 // Parser represents a streaming CSV parser
 type Parser struct {
-	file       *os.File
 	reader     *csv.Reader
 	lineNumber int
 	headers    []string
+	buffer     *bytes.Buffer
+	delimiter  rune
 }
 
 // Row represents a single CSV row with metadata
@@ -41,31 +41,36 @@ func (r *Row) IsEmpty() bool {
 }
 
 // NewParser creates a new CSV parser
-func NewParser(filePath, delimiter string) (*Parser, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
+func NewParser(input io.Reader, delimiter string) (*Parser, error) {
+	// Read all input into a buffer for UTF-8 validation and rewinding
+	buf := new(bytes.Buffer)
+	if _, err := io.Copy(buf, input); err != nil {
+		return nil, fmt.Errorf("failed to read input: %w", err)
 	}
 
-	reader := csv.NewReader(file)
+	reader := csv.NewReader(bytes.NewReader(buf.Bytes()))
 	reader.Comma = rune(delimiter[0])
 	reader.FieldsPerRecord = -1 // Allow variable number of fields
 
 	return &Parser{
-		file:   file,
-		reader: reader,
+		reader:    reader,
+		buffer:    buf,
+		delimiter: rune(delimiter[0]),
 	}, nil
 }
 
-// Close closes the underlying file
+// Close is a no-op since we don't own the reader
 func (p *Parser) Close() error {
-	return p.file.Close()
+	return nil
 }
 
 // ReadHeaders reads and returns the header row
 func (p *Parser) ReadHeaders() ([]string, error) {
 	headers, err := p.reader.Read()
 	if err != nil {
+		if err == io.EOF {
+			return nil, fmt.Errorf("empty input: no headers found")
+		}
 		return nil, fmt.Errorf("failed to read headers: %w", err)
 	}
 
@@ -92,37 +97,16 @@ func (p *Parser) ReadRow() (*Row, error) {
 	}, nil
 }
 
-// ValidateUTF8 checks if the file is valid UTF-8
+// ValidateUTF8 checks if the input is valid UTF-8
 func (p *Parser) ValidateUTF8() error {
-	// Reset file position
-	if _, err := p.file.Seek(0, 0); err != nil {
-		return fmt.Errorf("failed to reset file position: %w", err)
+	data := p.buffer.Bytes()
+	if !utf8.Valid(data) {
+		return fmt.Errorf("input contains invalid UTF-8 encoding")
 	}
 
-	reader := bufio.NewReader(p.file)
-	buffer := make([]byte, 4096)
-
-	for {
-		n, err := reader.Read(buffer)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read file for UTF-8 validation: %w", err)
-		}
-
-		if !utf8.Valid(buffer[:n]) {
-			return fmt.Errorf("file contains invalid UTF-8 encoding")
-		}
-	}
-
-	// Reset file position again for normal parsing
-	if _, err := p.file.Seek(0, 0); err != nil {
-		return fmt.Errorf("failed to reset file position after UTF-8 validation: %w", err)
-	}
-
-	// Recreate reader after seeking
-	p.reader = csv.NewReader(p.file)
+	// Create a new reader from the buffer for parsing
+	p.reader = csv.NewReader(bytes.NewReader(data))
+	p.reader.Comma = p.delimiter
 	p.reader.FieldsPerRecord = -1
 
 	return nil

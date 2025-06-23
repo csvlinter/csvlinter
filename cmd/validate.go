@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"csvlinter/internal/reporter"
@@ -13,8 +14,8 @@ import (
 
 var validateCommand = &cli.Command{
 	Name:      "validate",
-	Usage:     "Validate a CSV file against structure and optional schema",
-	ArgsUsage: "<csv-file>",
+	Usage:     "Validate a CSV file or STDIN against structure and optional schema",
+	ArgsUsage: "<csv-file or - for STDIN>",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "schema",
@@ -43,13 +44,19 @@ var validateCommand = &cli.Command{
 			Aliases: []string{"ff"},
 			Usage:   "Stop after first error",
 		},
+		&cli.Int64Flag{
+			Name:   "max-size",
+			Value:  10 * 1024 * 1024, // 10MB default
+			Usage:  "Maximum input size in bytes when reading from STDIN",
+			Hidden: true,
+		},
 	},
 	Action: validateAction,
 }
 
 func validateAction(c *cli.Context) error {
 	if c.NArg() < 1 {
-		return cli.Exit("Error: CSV file path is required", 1)
+		return cli.Exit("Error: CSV file path or - for STDIN is required", 1)
 	}
 
 	csvPath := c.Args().Get(0)
@@ -58,14 +65,28 @@ func validateAction(c *cli.Context) error {
 	format := c.String("format")
 	delimiter := c.String("delimiter")
 	failFast := c.Bool("fail-fast")
+	maxSize := c.Int64("max-size")
 
-	// Validate input file exists
-	if _, err := os.Stat(csvPath); os.IsNotExist(err) {
-		return cli.Exit(fmt.Sprintf("Error: CSV file '%s' does not exist", csvPath), 1)
+	var input io.Reader
+	var name string
+
+	if csvPath == "-" {
+		// Read from STDIN with size limit
+		input = io.LimitReader(os.Stdin, maxSize)
+		name = "STDIN"
+	} else {
+		// Validate input file exists
+		file, err := os.Open(csvPath)
+		if err != nil {
+			return cli.Exit(fmt.Sprintf("Error: Cannot open file '%s': %v", csvPath, err), 1)
+		}
+		defer file.Close()
+		input = file
+		name = csvPath
 	}
 
 	// Schema fallback logic
-	if schemaPath == "" {
+	if schemaPath == "" && csvPath != "-" {
 		schemaPath = schema.ResolveSchema(csvPath)
 	}
 
@@ -89,12 +110,11 @@ func validateAction(c *cli.Context) error {
 	}
 
 	// Create validator
-	v := validator.New(csvPath, delimiter, schemaValidator, failFast)
+	v := validator.New(input, name, delimiter, schemaValidator, failFast)
 
 	// Run validation
 	results, err := v.Validate()
 	if err != nil {
-		// This will now only catch operational errors like file not found during parsing
 		return cli.Exit(fmt.Sprintf("Error during validation: %v", err), 1)
 	}
 
