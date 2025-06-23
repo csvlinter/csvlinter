@@ -50,6 +50,10 @@ var validateCommand = &cli.Command{
 			Usage:  "Maximum input size in bytes when reading from STDIN",
 			Hidden: true,
 		},
+		&cli.StringFlag{
+			Name:  "filename",
+			Usage: "Logical filename to use for schema resolution and reporting when reading from STDIN",
+		},
 	},
 	Action: validateAction,
 }
@@ -66,6 +70,7 @@ func validateAction(c *cli.Context) error {
 	delimiter := c.String("delimiter")
 	failFast := c.Bool("fail-fast")
 	maxSize := c.Int64("max-size")
+	filename := c.String("filename")
 
 	var input io.Reader
 	var name string
@@ -73,7 +78,11 @@ func validateAction(c *cli.Context) error {
 	if csvPath == "-" {
 		// Read from STDIN with size limit
 		input = io.LimitReader(os.Stdin, maxSize)
-		name = "STDIN"
+		if filename != "" {
+			name = filename
+		} else {
+			name = "STDIN"
+		}
 	} else {
 		// Validate input file exists
 		file, err := os.Open(csvPath)
@@ -86,8 +95,13 @@ func validateAction(c *cli.Context) error {
 	}
 
 	// Schema fallback logic
-	if schemaPath == "" && csvPath != "-" {
-		schemaPath = schema.ResolveSchema(csvPath)
+	if schemaPath == "" {
+		if csvPath == "-" && filename != "" {
+			// Use provided logical filename for schema resolution
+			schemaPath = schema.ResolveSchema(filename)
+		} else if csvPath != "-" {
+			schemaPath = schema.ResolveSchema(csvPath)
+		}
 	}
 
 	// Validate schema file if provided

@@ -40,6 +40,9 @@ csvlinter validate data.csv
 # Validate data from STDIN (use "-" as input)
 cat data.csv | csvlinter validate -
 
+# Validate STDIN and provide a logical filename for schema resolution
+cat data.csv | csvlinter validate - --filename data.csv
+
 # Validate with custom delimiter (short flag)
 csvlinter validate data.csv -d ";"
 
@@ -90,6 +93,9 @@ csvlinter supports reading data from standard input using `-` as the input file:
 # Basic STDIN validation
 cat data.csv | csvlinter validate -
 
+# Provide a logical filename for schema resolution and reporting
+cat data.csv | csvlinter validate - --filename data.csv
+
 # Pipeline integration
 generate-csv | csvlinter validate - --fail-fast
 
@@ -99,6 +105,9 @@ cat data.csv | csvlinter validate - -d ";" -s schema.json
 
 > **Size Limit:**
 > STDIN input is limited to 10MB by default. Use `--max-size` flag to adjust this limit (e.g., `--max-size 50MB`).
+
+> **Logical Filename:**
+> Use `--filename` to provide a logical filename for schema resolution and reporting when reading from STDIN. This enables automatic schema lookup as if you were validating a file with that name.
 
 ## JSON Schema Support
 
@@ -137,7 +146,7 @@ csvlinter validate users.csv --schema user-schema.json
 When you do not specify a schema file with `--schema` or `-s`, csvlinter will attempt to automatically resolve the schema by searching for a file named `<csv>.schema.json` (where `<csv>` is your CSV filename) in the same directory as your CSV file. If not found, it will look for a file named `csvlinter.schema.json` in the same directory and then recursively in each parent directory until it reaches the root.
 
 > **Note for STDIN:**
-> When using STDIN input (`-`), automatic schema resolution is disabled. You must explicitly provide a schema file using the `--schema` or `-s` flag if validation against a schema is required.
+> When using STDIN input (`-`), automatic schema resolution is disabled unless you provide a logical filename with `--filename`. In that case, schema resolution works as if you were validating a file with that name. You must still explicitly provide a schema file using the `--schema` or `-s` flag if no schema is found.
 
 ## Examples
 
