@@ -32,7 +32,7 @@ jobs:
           branches: |
             main
           tagFormat: v${version}
-          plugins: |
+          plugins: >-
             [["@semantic-release/commit-analyzer", {
               "preset": "conventionalcommits",
               "releaseRules": [
@@ -48,6 +48,7 @@ jobs:
                 { "scope": "no-release", "release": false }
               ]
             }], "@semantic-release/release-notes-generator"]
+
 
   release:
     needs: calculate-version
