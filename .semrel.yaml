@@ -3,8 +3,8 @@ branches:
 changelog:
   sort: asc
   filters:
-    exclude:
-      - chore
     include:
       - feat
       - fix
+      - docs
+      - ci

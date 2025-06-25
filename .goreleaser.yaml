@@ -1,3 +1,4 @@
+version: 2
 builds:
   - id: csvlinter
     main: ./main.go
@@ -10,5 +11,18 @@ builds:
 
 archives:
   - id: binaries
-    format: tar.gz
     name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+
+homebrew_casks:
+  - name: csvlinter
+    repository:
+      owner: csvlinter
+      name: homebrew-tap
+    directory: Formula
+    commit_author:
+      name: goreleaser-bot
+      email: ci@users.noreply.github.com
+    commit_msg_template: |
+      chore(brew): bump {{ .FormulaName }} to {{ .Version }}
+    homepage:  https://github.com/csvlinter/csvlinter
+    description: "Streaming CSV validator with JSON-Schema support"
