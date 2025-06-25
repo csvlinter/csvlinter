@@ -18,15 +18,15 @@ archives:
 
 brews:
   - name: csvlinter
-    tap:
+    repository:
       owner: csvlinter
       name: homebrew-tap
-    folder: Formula
+    directory: Formula
     commit_author:
       name: goreleaser-bot
       email: ci@users.noreply.github.com
     commit_msg_template: |
-      chore(brew): bump {{ .FormulaName }} to {{ .Version }}
+      chore(brew): bump {{ .ProjectName }} to {{ .Version }}
     homepage: https://github.com/csvlinter/csvlinter
     description: "Streaming CSV validator with JSON-Schema support"
 
