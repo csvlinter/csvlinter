@@ -28,9 +28,6 @@ jobs:
       - name: Evaluate next release version
         id: release
         uses: Sujimoshi/semantic-release-action@v1.8.0
-        with:
-          branches: |
-            main
 
   release:
     needs: calculate-version
