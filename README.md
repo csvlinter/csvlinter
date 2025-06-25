@@ -15,6 +15,12 @@ A modern, streaming-first CSV validator with JSON Schema support. Validates stru
 
 ## Installation
 
+### Using Homebrew
+
+```bash
+brew tap csvlinter/tap && brew install csvlinter
+```
+
 ### From Source
 
 ```bash
