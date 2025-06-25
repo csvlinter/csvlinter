@@ -1,28 +1,38 @@
-version: 2
 builds:
   - id: csvlinter
     main: ./main.go
     binary: csvlinter
-    goos: [darwin, linux, windows]
-    goarch: [amd64, arm64]
-    # optional: disable CGO for static binaries
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
     env:
       - CGO_ENABLED=0
 
 archives:
   - id: binaries
-    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+    name_template: '{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}'
 
-homebrew_casks:
+brews:
   - name: csvlinter
-    repository:
+    tap:
       owner: csvlinter
       name: homebrew-tap
-    directory: Formula
+    folder: Formula
     commit_author:
       name: goreleaser-bot
       email: ci@users.noreply.github.com
     commit_msg_template: |
       chore(brew): bump {{ .FormulaName }} to {{ .Version }}
-    homepage:  https://github.com/csvlinter/csvlinter
+    homepage: https://github.com/csvlinter/csvlinter
     description: "Streaming CSV validator with JSON-Schema support"
+
+    install: |
+      bin.install "csvlinter"
+    test: |
+      (testpath/"bad.csv").write("col\nbad")
+      output = shell_output("#{bin}/csvlinter bad.csv", 1)
+      assert_match "Row 2", output
