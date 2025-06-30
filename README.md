@@ -282,22 +282,19 @@ The public API is available in `pkg/csvlinter` and supports validating CSV data 
 import (
     "os"
     "github.com/csvlinter/csvlinter/pkg/csvlinter"
-    "github.com/csvlinter/csvlinter/internal/schema"
 )
 
 // Validate CSV without schema
 f, _ := os.Open("file.csv")
 results, err := csvlinter.Lint(f, "file.csv", ",")
 
-// Validate CSV with schema (both as streams)
+// Validate CSV with schema (pass schema filename)
 csvFile, _ := os.Open("file.csv")
-schemaFile, _ := os.Open("schema.json")
-schemaValidator, err := schema.NewValidatorFromReader(schemaFile)
-results, err := csvlinter.LintWithSchema(csvFile, "file.csv", ",", schemaValidator)
+results, err := csvlinter.LintWithSchema(csvFile, "file.csv", ",", "schema.json")
 ```
 
 - `Lint(r io.Reader, name string, delimiter string)`
-- `LintWithSchema(r io.Reader, name string, delimiter string, schemaValidator *schema.Validator)`
+- `LintWithSchema(r io.Reader, name string, delimiter string, schemaPath string)`
 
 You can use any stream (file, network, in-memory, etc.) for both CSV and schema data.
 
