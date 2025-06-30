@@ -270,3 +270,7 @@ See the [Conventional Commits documentation](https://www.conventionalcommits.org
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
+
+## Public API
+
+The public API is now available in pkg/csvlinter with Lint and LintWithSchema functions.
