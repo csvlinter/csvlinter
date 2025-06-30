@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"csvlinter/internal/validator"
+	"github.com/csvlinter/csvlinter/internal/validator"
 )
 
 func TestReporter(t *testing.T) {

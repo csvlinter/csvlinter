@@ -5,8 +5,8 @@ import (
 	"io"
 	"time"
 
-	"csvlinter/internal/parser"
-	"csvlinter/internal/schema"
+	"github.com/csvlinter/csvlinter/internal/parser"
+	"github.com/csvlinter/csvlinter/internal/schema"
 )
 
 // Error represents a validation error

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"csvlinter/cmd"
+	"github.com/csvlinter/csvlinter/cmd"
 )
 
 func main() {
