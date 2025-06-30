@@ -12,6 +12,7 @@ A modern, streaming-first CSV validator with JSON Schema support. Validates stru
 - **Multiple Output Formats**: Pretty terminal output and structured JSON
 - **Fail-Fast Mode**: Stop validation on first error for CI/CD integration
 - **Cross-Platform**: Works on Windows, macOS, and Linux
+- **RFC 4180 Compliance**: Uses Go's standard CSV parser for robust, standards-based CSV handling
 
 ## Installation
 
@@ -299,3 +300,7 @@ results, err := csvlinter.LintWithSchema(csvFile, "file.csv", ",", schemaValidat
 - `LintWithSchema(r io.Reader, name string, delimiter string, schemaValidator *schema.Validator)`
 
 You can use any stream (file, network, in-memory, etc.) for both CSV and schema data.
+
+## RFC 4180 Compliance
+
+csvlinter uses Go's standard `encoding/csv` parser, which is designed to be compatible with [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180), the common format for CSV files. This ensures robust handling of quoted fields, embedded newlines, and delimiter rules as described in the RFC.
