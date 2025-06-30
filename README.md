@@ -273,4 +273,29 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Public API
 
-The public API is now available in pkg/csvlinter with Lint and LintWithSchema functions.
+The public API is available in `pkg/csvlinter` and supports validating CSV data from any `io.Reader` (no need to write files to disk).
+
+### Example Usage
+
+```go
+import (
+    "os"
+    "github.com/csvlinter/csvlinter/pkg/csvlinter"
+    "github.com/csvlinter/csvlinter/internal/schema"
+)
+
+// Validate CSV without schema
+f, _ := os.Open("file.csv")
+results, err := csvlinter.Lint(f, "file.csv", ",")
+
+// Validate CSV with schema (both as streams)
+csvFile, _ := os.Open("file.csv")
+schemaFile, _ := os.Open("schema.json")
+schemaValidator, err := schema.NewValidatorFromReader(schemaFile)
+results, err := csvlinter.LintWithSchema(csvFile, "file.csv", ",", schemaValidator)
+```
+
+- `Lint(r io.Reader, name string, delimiter string)`
+- `LintWithSchema(r io.Reader, name string, delimiter string, schemaValidator *schema.Validator)`
+
+You can use any stream (file, network, in-memory, etc.) for both CSV and schema data.

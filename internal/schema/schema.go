@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -26,6 +27,28 @@ func NewValidator(schemaPath string) (*Validator, error) {
 	schemaBytes, err := os.ReadFile(schemaPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read schema file: %w", err)
+	}
+
+	compiler := jsonschema.NewCompiler()
+	if err := compiler.AddResource("schema.json", strings.NewReader(string(schemaBytes))); err != nil {
+		return nil, fmt.Errorf("failed to add schema resource: %w", err)
+	}
+
+	schema, err := compiler.Compile("schema.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile schema: %w", err)
+	}
+
+	return &Validator{
+		schema: schema,
+	}, nil
+}
+
+// NewValidatorFromReader creates a new schema validator from a JSON Schema io.Reader
+func NewValidatorFromReader(r io.Reader) (*Validator, error) {
+	schemaBytes, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read schema: %w", err)
 	}
 
 	compiler := jsonschema.NewCompiler()
