@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"csvlinter/internal/validator"
+	"github.com/csvlinter/csvlinter/internal/validator"
 
 	"github.com/urfave/cli/v2"
 )

@@ -1,4 +1,4 @@
-module csvlinter
+module github.com/csvlinter/csvlinter
 
 go 1.20
 

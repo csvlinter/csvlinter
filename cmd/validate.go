@@ -5,9 +5,9 @@ import (
 	"io"
 	"os"
 
-	"csvlinter/internal/reporter"
-	"csvlinter/internal/schema"
-	"csvlinter/internal/validator"
+	"github.com/csvlinter/csvlinter/internal/reporter"
+	"github.com/csvlinter/csvlinter/internal/schema"
+	"github.com/csvlinter/csvlinter/internal/validator"
 
 	"github.com/urfave/cli/v2"
 )

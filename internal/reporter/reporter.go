@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"csvlinter/internal/validator"
+	"github.com/csvlinter/csvlinter/internal/validator"
 
 	"github.com/mattn/go-isatty"
 )
