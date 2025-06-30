@@ -1,9 +1,16 @@
 package csvlinter
 
 import (
-	"path/filepath"
+	"bytes"
+	"os"
 	"testing"
+
+	"github.com/csvlinter/csvlinter/internal/schema"
 )
+
+func readFileToBytes(path string) ([]byte, error) {
+	return os.ReadFile(path)
+}
 
 func TestLint(t *testing.T) {
 	testCases := []struct {
@@ -31,12 +38,12 @@ func TestLint(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			absPath, err := filepath.Abs(tc.filePath)
+			data, err := readFileToBytes(tc.filePath)
 			if err != nil {
-				t.Fatalf("Failed to get absolute path: %v", err)
+				t.Fatalf("Failed to read file: %v", err)
 			}
-
-			results, err := Lint(absPath, tc.delimiter)
+			reader := bytes.NewReader(data)
+			results, err := Lint(reader, tc.filePath, tc.delimiter)
 
 			if tc.expectSuccess && err != nil {
 				t.Errorf("Expected no error, but got: %v", err)
@@ -62,16 +69,21 @@ func TestLint(t *testing.T) {
 func TestLintWithSchema(t *testing.T) {
 	csvPath := "../../testdata/valid_sample.csv"
 	schemaPath := "../../testdata/csvlinter.schema.json"
-	absCSV, err := filepath.Abs(csvPath)
+	csvData, err := readFileToBytes(csvPath)
 	if err != nil {
-		t.Fatalf("Failed to get absolute path: %v", err)
+		t.Fatalf("Failed to read CSV file: %v", err)
 	}
-	absSchema, err := filepath.Abs(schemaPath)
+	schemaData, err := readFileToBytes(schemaPath)
 	if err != nil {
-		t.Fatalf("Failed to get absolute path: %v", err)
+		t.Fatalf("Failed to read schema file: %v", err)
 	}
 
-	results, err := LintWithSchema(absCSV, absSchema, ",")
+	schemaValidator, err := schema.NewValidatorFromReader(bytes.NewReader(schemaData))
+	if err != nil {
+		t.Fatalf("Failed to create schema validator: %v", err)
+	}
+
+	results, err := LintWithSchema(bytes.NewReader(csvData), csvPath, ",", schemaValidator)
 	if err != nil {
 		t.Errorf("Expected no error, but got: %v", err)
 	}
