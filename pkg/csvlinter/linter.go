@@ -30,12 +30,16 @@ func Lint(r io.Reader, name string, delimiter string) (*validator.Results, error
 	return v.Validate()
 }
 
-// LintWithSchema validates a CSV stream with a provided schema validator.
+// LintWithSchema validates a CSV stream with a schema loaded from a file.
 // r: CSV data stream
 // name: label for reporting (e.g., filename)
 // delimiter: field delimiter (e.g., ",", ";", "\t")
-// schemaValidator: compiled schema validator
-func LintWithSchema(r io.Reader, name string, delimiter string, schemaValidator *schema.Validator) (*validator.Results, error) {
+// schemaPath: path to the JSON schema file
+func LintWithSchema(r io.Reader, name string, delimiter string, schemaPath string) (*validator.Results, error) {
+	schemaValidator, err := schema.NewValidator(schemaPath)
+	if err != nil {
+		return nil, err
+	}
 	v := validator.New(r, name, delimiter, schemaValidator, false)
 	return v.Validate()
 }

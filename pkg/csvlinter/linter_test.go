@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"os"
 	"testing"
-
-	"github.com/csvlinter/csvlinter/internal/schema"
 )
 
 func readFileToBytes(path string) ([]byte, error) {
@@ -73,17 +71,8 @@ func TestLintWithSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to read CSV file: %v", err)
 	}
-	schemaData, err := readFileToBytes(schemaPath)
-	if err != nil {
-		t.Fatalf("Failed to read schema file: %v", err)
-	}
 
-	schemaValidator, err := schema.NewValidatorFromReader(bytes.NewReader(schemaData))
-	if err != nil {
-		t.Fatalf("Failed to create schema validator: %v", err)
-	}
-
-	results, err := LintWithSchema(bytes.NewReader(csvData), csvPath, ",", schemaValidator)
+	results, err := LintWithSchema(bytes.NewReader(csvData), csvPath, ",", schemaPath)
 	if err != nil {
 		t.Errorf("Expected no error, but got: %v", err)
 	}
