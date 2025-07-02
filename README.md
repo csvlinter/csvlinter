@@ -281,20 +281,36 @@ The public API is available in `pkg/csvlinter` and supports validating CSV data 
 ```go
 import (
     "os"
+    "bytes"
     "github.com/csvlinter/csvlinter/pkg/csvlinter"
 )
 
-// Validate CSV without schema
+// Validate CSV without schema (basic)
 f, _ := os.Open("file.csv")
 results, err := csvlinter.Lint(f, "file.csv", ",")
 
-// Validate CSV with schema (pass schema filename)
+// Validate CSV with schema (basic)
 csvFile, _ := os.Open("file.csv")
 results, err := csvlinter.LintWithSchema(csvFile, "file.csv", ",", "schema.json")
+
+// Advanced: Use Options struct for full control
+opts := csvlinter.Options{
+    Delimiter:  ";",                // Custom delimiter
+    FailFast:   true,                // Stop after first error
+    Format:     "json",             // Output format: "pretty" or "json"
+    Output:     "results.json",     // Output file (leave empty for stdout/writer)
+    Filename:   "data.csv",         // Logical filename for schema resolution
+    SchemaPath: "schema.json",      // Optional: explicit schema path
+}
+f2, _ := os.Open("file.csv")
+var buf bytes.Buffer
+err = csvlinter.LintAdvanced(f2, opts, &buf) // Output written to buf if Output is empty
+// If opts.Output is set, results are written to that file.
 ```
 
 - `Lint(r io.Reader, name string, delimiter string)`
 - `LintWithSchema(r io.Reader, name string, delimiter string, schemaPath string)`
+- `LintAdvanced(r io.Reader, opts Options, writer io.Writer)`
 
 You can use any stream (file, network, in-memory, etc.) for both CSV and schema data.
 

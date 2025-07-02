@@ -120,6 +120,12 @@ func (v *Validator) Validate() (*Results, error) {
 				Message:    fmt.Sprintf("column count mismatch: expected %d, got %d", len(headers), len(row.Data)),
 				Type:       "structure",
 			})
+			// Fail fast if requested
+			if v.failFast {
+				break
+			}
+			// Skip schema validation for this row
+			continue
 		}
 
 		// Schema validation if available
