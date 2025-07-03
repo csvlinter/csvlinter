@@ -8,7 +8,7 @@
 - **csvkit**:
   - `csvstat`: Provides statistics and type inference, but does not strictly validate content or enforce schemas.
   - `csvclean`: Detects malformed rows and structural issues, but does not validate content or support schemas.
-- **csvlint**: Supports validation and schema checking, but only with [CSV on the Web (CSVW)](https://w3c.github.io/csvw/) metadata, not JSON Schema.
+- **csvlint**: Supports validation and schema checking, but only with [CSV on the Web (CSVW)](https://w3c.github.io/csvw/) metadata, not JSON schema.
 
 ### When is comparison fair?
 - **Parsing/analysis speed**: Comparing `csvlinter` and `csvkit` (`csvstat`) is fair for raw reading and analysis.
