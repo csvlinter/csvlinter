@@ -1,4 +1,5 @@
-# csvlinter — ⚡ The Fastest Streaming CSV Validator (up to 270x faster than similar tools)
+# csvlinter
+## ⚡ The fastest streaming CSV validator (up to 270x faster than similar tools)
 
 Blazing-fast, streaming-first CSV validator with JSON Schema support. Validates structure, content, and encoding of CSV files — built for CI, CLI, API and editor integration.
 
@@ -9,15 +10,15 @@ Blazing-fast, streaming-first CSV validator with JSON Schema support. Validates 
 
 ## Features
 
-- **Streaming Validation**: Processes large CSV files efficiently without loading everything into memory
-- **STDIN Support**: Process data directly from standard input
-- **JSON Schema Support**: Validate CSV data against JSON Schema specifications
-- **UTF-8 Encoding Validation**: Ensures proper character encoding
-- **Flexible Delimiters**: Support for custom delimiter characters
-- **Multiple Output Formats**: Pretty terminal output and structured JSON
-- **Fail-Fast Mode**: Stop validation on first error for CI/CD integration
-- **Cross-Platform**: Works on Windows, macOS, and Linux
-- **RFC 4180 Compliance**: Uses Go's standard CSV parser for robust, standards-based CSV handling
+- **Streaming validation**: Processes large CSV files efficiently without loading everything into memory
+- **STDIN support**: Process data directly from standard input
+- **JSON schema support**: Validate CSV data against JSON Schema specifications
+- **UTF-8 encoding validation**: Ensures proper character encoding
+- **Flexible delimiters**: Support for custom delimiter characters
+- **Multiple output formats**: Pretty terminal output and structured JSON
+- **Fail-fast mode**: Stop validation on first error for CI/CD integration
+- **Cross-platform**: Works on Windows, macOS, and Linux
+- **RFC 4180 compliance**: Uses Go's standard CSV parser for robust, standards-based CSV handling
 
 ## Installation
 
@@ -27,7 +28,7 @@ Blazing-fast, streaming-first CSV validator with JSON Schema support. Validates 
 brew tap csvlinter/tap && brew install csvlinter
 ```
 
-### From Source
+### From source
 
 ```bash
 git clone https://github.com/yourusername/csvlinter.git
@@ -43,7 +44,7 @@ go install github.com/yourusername/csvlinter@latest
 
 ## Usage
 
-### Basic Validation
+### Basic validation
 
 ```bash
 # Validate a CSV file (auto-detects schema if not provided)
@@ -68,10 +69,10 @@ csvlinter validate data.csv -s schema.json
 cat data.csv | csvlinter validate - -s schema.json
 ```
 
-> **Schema Fallback:**
+> **Schema fallback:**
 > If `--schema`/`-s` is not set, csvlinter will look for `<csv>.schema.json` or `csvlinter.schema.json` in the same or parent directories automatically.
 
-### Output Options
+### Output options
 
 ```bash
 # Pretty output (default)
@@ -87,7 +88,7 @@ csvlinter validate data.csv -o results.json -f json
 > **Output File:**
 > If `--output`/`-o` is set, results are written to the specified file. Otherwise, output is printed to the terminal.
 
-### CI/CD Integration
+### CI/CD integration
 
 ```bash
 # Fail-fast mode for CI
@@ -97,7 +98,7 @@ csvlinter validate data.csv --fail-fast
 csvlinter validate data.csv || exit 1
 ```
 
-### STDIN Support
+### STDIN support
 
 csvlinter supports reading data from standard input using `-` as the input file:
 
@@ -115,15 +116,15 @@ generate-csv | csvlinter validate - --fail-fast
 cat data.csv | csvlinter validate - -d ";" -s schema.json
 ```
 
-> **Size Limit:**
+> **Size limit:**
 > STDIN input is limited to 10MB by default. Use `--max-size` flag to adjust this limit (e.g., `--max-size 50MB`).
 
-> **Logical Filename:**
+> **Logical filename:**
 > Use `--filename` to provide a logical filename for schema resolution and reporting when reading from STDIN. This enables automatic schema lookup as if you were validating a file with that name.
 
-## JSON Schema Support
+## JSON schema support
 
-Create a JSON Schema file to validate your CSV data:
+Create a JSON schema file to validate your CSV data:
 
 ```json
 {
@@ -153,7 +154,7 @@ Then validate your CSV:
 csvlinter validate users.csv --schema user-schema.json
 ```
 
-### Schema Resolution:
+### Schema resolution:
 
 When you do not specify a schema file with `--schema` or `-s`, csvlinter will attempt to automatically resolve the schema by searching for a file named `<csv>.schema.json` (where `<csv>` is your CSV filename) in the same directory as your CSV file. If not found, it will look for a file named `csvlinter.schema.json` in the same directory and then recursively in each parent directory until it reaches the root.
 
@@ -196,9 +197,9 @@ csvlinter validate invalid.csv
 cat invalid.csv | csvlinter validate - --fail-fast
 ```
 
-## Output Formats
+## Output formats
 
-### Pretty Output
+### Pretty output
 ```
 CSV Validation Results
 =====================
@@ -216,7 +217,7 @@ Errors (2):
 ✗ Found 2 error(s)
 ```
 
-### JSON Output
+### JSON output
 ```json
 {
   "file": "data.csv",
@@ -237,7 +238,7 @@ Errors (2):
 }
 ```
 
-## Error Types
+## Error types
 
 - **structure**: CSV format issues (wrong column count, malformed rows)
 - **schema**: JSON Schema validation failures
@@ -251,7 +252,7 @@ Errors (2):
 4. Add tests
 5. Submit a pull request
 
-### Commit Message Guidelines (Conventional Commits)
+### Commit message guidelines (conventional commits)
 
 This project uses [semantic-release](https://semantic-release.gitbook.io/) for automated versioning and changelog generation. To ensure your contributions are included in releases, **please follow the [Conventional Commits](https://www.conventionalcommits.org/) specification** for your commit messages:
 
@@ -281,7 +282,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 The public API is available in `pkg/csvlinter` and supports validating CSV data from any `io.Reader` (no need to write files to disk).
 
-### Example Usage
+### Example usage
 
 ```go
 import (
