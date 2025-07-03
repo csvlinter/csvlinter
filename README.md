@@ -1,4 +1,4 @@
-# csvlinter — The Fastest Streaming CSV Validator (up to 270x faster similar tools)
+# csvlinter — ⚡ The Fastest Streaming CSV Validator (up to 270x faster than similar tools)
 
 Blazing-fast, streaming-first CSV validator with JSON Schema support. Validates structure, content, and encoding of CSV files — built for CI, CLI, API and editor integration.
 
