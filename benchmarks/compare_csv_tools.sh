@@ -6,7 +6,7 @@ DATADIR="$(pwd)/benchmarks"
 # Generate large_valid_sample.csv if not present
 if [ ! -f "$DATADIR/large_valid_sample.csv" ]; then
   echo "Generating large_valid_sample.csv..."
-  go run benchmarks/gen_large_valid_csv.go "$DATADIR/large_valid_sample.csv"
+  go run benchmarks/gen_large_valid_csv/main.go "$DATADIR/large_valid_sample.csv"
 else
   echo "large_valid_sample.csv already exists. Skipping generation."
 fi
@@ -14,7 +14,7 @@ fi
 # Generate large_invalid_sample.csv if not present
 if [ ! -f "$DATADIR/large_invalid_sample.csv" ]; then
   echo "Generating large_invalid_sample.csv..."
-  go run benchmarks/gen_large_invalid_csv.go "$DATADIR/large_invalid_sample.csv"
+  go run benchmarks/gen_large_invalid_csv/main.go "$DATADIR/large_invalid_sample.csv"
 else
   echo "large_invalid_sample.csv already exists. Skipping generation."
 fi
