@@ -7,9 +7,9 @@ import (
 	"io"
 	"os"
 
+	"github.com/csvlinter/csvlinter/internal/reporter"
 	"github.com/csvlinter/csvlinter/internal/schema"
 	"github.com/csvlinter/csvlinter/internal/validator"
-	"github.com/csvlinter/csvlinter/internal/reporter"
 )
 
 // Package csvlinter provides a public API for validating CSV files from any io.Reader, with or without a schema.
@@ -28,12 +28,12 @@ import (
 
 // Options defines advanced options for CSV linting.
 type Options struct {
-	Delimiter  string      // Field delimiter (e.g., ",", ";", "\t")
-	FailFast   bool        // Stop after first error
-	Format     string      // Output format: "pretty" or "json"
-	Output     string      // Output file path (if empty, write to writer)
-	Filename   string      // Logical filename for schema resolution (used if reading from stream)
-	SchemaPath string      // Path to JSON schema file (optional)
+	Delimiter  string // Field delimiter (e.g., ",", ";", "\t")
+	FailFast   bool   // Stop after first error
+	Format     string // Output format: "pretty" or "json"
+	Output     string // Output file path (if empty, write to writer)
+	Filename   string // Logical filename for schema resolution (used if reading from stream)
+	SchemaPath string // Path to JSON schema file (optional)
 }
 
 // LintAdvanced validates a CSV stream with advanced options, matching CLI capabilities.

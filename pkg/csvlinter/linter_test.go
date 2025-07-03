@@ -348,11 +348,11 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 		tempDir := t.TempDir()
 		outputPath := tempDir + "/combo.json"
 		opts := Options{
-			Delimiter:  ",",
-			FailFast:   true,
-			Format:     "json",
-			Output:     outputPath,
-			Filename:   csvPath,
+			Delimiter: ",",
+			FailFast:  true,
+			Format:    "json",
+			Output:    outputPath,
+			Filename:  csvPath,
 		}
 		err := LintAdvanced(bytes.NewReader(csvData), opts, nil)
 		if err != nil {

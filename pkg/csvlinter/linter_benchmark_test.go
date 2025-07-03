@@ -62,4 +62,4 @@ func BenchmarkLint_LargeCSV_WithSchema(b *testing.B) {
 			b.Fatalf("LintWithSchema failed: %v", err)
 		}
 	}
-} 
+}
