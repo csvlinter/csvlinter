@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -110,7 +111,7 @@ func TestLintAdvanced(t *testing.T) {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
 		output := buf.String()
-		if len(output) == 0 || output[:3] != "CSV" {
+		if !strings.Contains(output, "CSV Validation Results") {
 			t.Errorf("Expected pretty output, got: %q", output)
 		}
 	})
@@ -279,7 +280,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
 		output := buf.String()
-		if !bytes.Contains(buf.Bytes(), []byte("CSV Validation Results")) {
+		if !strings.Contains(output, "CSV Validation Results") {
 			t.Errorf("Expected pretty output, got: %q", output)
 		}
 	})

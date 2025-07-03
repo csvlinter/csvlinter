@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "age": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "city": {
+      "type": "string",
+      "minLength": 1,
+      "enum": [
+        "Metropolis"
+      ]
+    }
+  },
+  "required": [
+    "name",
+    "age",
+    "email",
+    "city"
+  ],
+  "additionalProperties": false
+}

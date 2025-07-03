@@ -19,22 +19,25 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o csvlinter .
 
 # Final stage
-FROM alpine:latest
+FROM debian:bookworm
 
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
+RUN apt-get update && \
+  apt-get install -y ca-certificates time && \
+  rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root/
 
 # Copy the binary from builder stage
 COPY --from=builder /app/csvlinter .
+RUN mkdir -p /data
+COPY --from=builder /app/csvlinter /data/csvlinter
 
 # Create a non-root user
-RUN addgroup -g 1001 csvlinter && \
-  adduser -D -s /bin/sh -u 1001 -G csvlinter csvlinter
+RUN groupadd -g 1001 csvlinter && \
+  useradd -m -u 1001 -g csvlinter csvlinter
 
 # Change ownership of the binary
-RUN chown csvlinter:csvlinter csvlinter
+RUN chown csvlinter:csvlinter csvlinter /data/csvlinter
 
 # Switch to non-root user
 USER csvlinter
