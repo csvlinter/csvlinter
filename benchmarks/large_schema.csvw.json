@@ -1,0 +1,46 @@
+{
+  "@context": "http://www.w3.org/ns/csvw",
+  "url": "large_valid_sample.csv",
+  "tableSchema": {
+    "columns": [
+      {
+        "name": "name",
+        "titles": "name",
+        "datatype": "string",
+        "required": true,
+        "constraints": {
+          "minLength": 1
+        }
+      },
+      {
+        "name": "age",
+        "titles": "age",
+        "datatype": "string",
+        "required": true,
+        "constraints": {
+          "pattern": "^[0-9]+$"
+        }
+      },
+      {
+        "name": "email",
+        "titles": "email",
+        "datatype": "string",
+        "required": true,
+        "constraints": {
+          "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+        }
+      },
+      {
+        "name": "city",
+        "titles": "city",
+        "datatype": "string",
+        "required": true,
+        "constraints": {
+          "enum": [
+            "Metropolis"
+          ]
+        }
+      }
+    ]
+  }
+}

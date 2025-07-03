@@ -1,0 +1,16 @@
+FROM debian:bookworm
+
+# Install Ruby, build tools, libcurl, and GNU time for benchmarking
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+  ruby \
+  ruby-dev \
+  build-essential \
+  libcurl4 \
+  time \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN gem install csvlint
+
+WORKDIR /data
+ENTRYPOINT ["csvlint"] 

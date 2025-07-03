@@ -1,6 +1,11 @@
-# csvlinter
+# csvlinter — The Fastest Streaming CSV Validator (up to 270x faster similar tools)
 
-A modern, streaming-first CSV validator with JSON Schema support. Validates structure, content, and encoding of CSV files — built for CI, CLI, and editor integration.
+Blazing-fast, streaming-first CSV validator with JSON Schema support. Validates structure, content, and encoding of CSV files — built for CI, CLI, API and editor integration.
+
+> **Performance:** On a 1,000,000-row CSV:
+> - **Structure-only validation:** csvlinter completes in **0.23s**, compared to **8.83s** for csvkit (`csvstat`) and **30s** for csvlint — that's **38x faster than csvkit** and **130x faster than csvlint**.
+> - **Schema validation:** csvlinter is **60–270x faster** than csvkit or csvlint, while using significantly less memory.
+[See Benchmarks & Tool Comparison](./benchmark.md)
 
 ## Features
 
@@ -317,3 +322,5 @@ You can use any stream (file, network, in-memory, etc.) for both CSV and schema 
 ## RFC 4180 Compliance
 
 csvlinter uses Go's standard `encoding/csv` parser, which is designed to be compatible with [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180), the common format for CSV files. This ensures robust handling of quoted fields, embedded newlines, and delimiter rules as described in the RFC.
+
+

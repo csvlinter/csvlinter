@@ -43,4 +43,18 @@ build/
 
 # Temporary files
 tmp/
-temp/ 
+temp/
+
+# Benchmark artifacts
+benchmarks/*.time
+benchmarks/*.out
+testdata/large_sample.csv
+# Do not ignore the Dockerfile in benchmarks/
+!benchmarks/Dockerfile
+
+# Dockerfiles
+Dockerfile
+
+# Ignore generated large CSVs and schema in benchmarks/
+benchmarks/large_valid_sample.csv
+benchmarks/large_invalid_sample.csv
