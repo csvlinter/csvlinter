@@ -1,6 +1,6 @@
-# CSV Linter Benchmarks & Tool Comparison
+# csvlinter benchmarks & tool comparison
 
-## Tool Comparison Notes
+## Tool comparison notes
 
 **csvlinter** is a strict CSV validator with JSON Schema support, designed for robust structure and content validation. By contrast, **csvkit** (including tools like `csvstat` and `csvclean`) and **csvlint** have different focuses:
 
@@ -15,9 +15,9 @@
 - **Structural validation**: Comparing `csvlinter` and `csvkit` (`csvclean`) is fair for detecting malformed CSVs.
 - **Schema/content validation**: Only `csvlinter` (JSON Schema) and `csvlint` (CSVW) support this; `csvkit` does not.
 
-### Feature Comparison Table
+### Feature comparison table
 
-| Tool      | Structural Validation | Schema Validation      | Stats/Analysis |
+| Tool      | Structural validation | Schema validation      | Stats/analysis |
 |-----------|----------------------|-----------------------|---------------|
 | csvlinter | Yes                  | Yes (JSON Schema)     | No            |
 | csvkit    | csvclean: Yes        | No                    | csvstat: Yes  |
@@ -35,7 +35,7 @@ To run the benchmarks (requires Docker):
 
 This will generate large CSVs in benchmarks/, run all tools, and update this benchmark file.
 
-## Benchmark Results
+## Benchmark results
 
 | Tool     | Scenario         | Time (s) | Max RSS (MB) |
 |----------|------------------|----------|--------------|
