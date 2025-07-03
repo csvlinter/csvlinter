@@ -2,6 +2,6 @@ linters:
   enable:
     - all
 
-run:
-  skip-dirs:
+issues:
+  exclude-dirs:
     - benchmarks
