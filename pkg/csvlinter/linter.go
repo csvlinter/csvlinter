@@ -20,20 +20,22 @@ import (
 //   f, _ := os.Open("file.csv")
 //   results, err := csvlinter.Lint(f, "file.csv", ",")
 //
-//   // Validate CSV with schema (both as streams)
-//   csvFile, _ := os.Open("file.csv")
-//   schemaFile, _ := os.Open("schema.json")
-//   schemaValidator, err := schema.NewValidatorFromReader(schemaFile)
-//   results, err := csvlinter.LintWithSchema(csvFile, "file.csv", ",", schemaValidator)
+//   // Validate CSV with schema from stream (no file on disk)
+//   csvReader := strings.NewReader(csvContent)
+//   schemaReader := strings.NewReader(schemaJSON)
+//   opts := csvlinter.Options{SchemaReader: schemaReader, Delimiter: ",", Format: "json", Filename: "data.csv"}
+//   var buf bytes.Buffer
+//   err := csvlinter.LintAdvanced(csvReader, opts, &buf)
 
 // Options defines advanced options for CSV linting.
 type Options struct {
-	Delimiter  string // Field delimiter (e.g., ",", ";", "\t")
-	FailFast   bool   // Stop after first error
-	Format     string // Output format: "pretty" or "json"
-	Output     string // Output file path (if empty, write to writer)
-	Filename   string // Logical filename for schema resolution (used if reading from stream)
-	SchemaPath string // Path to JSON schema file (optional)
+	Delimiter    string   // Field delimiter (e.g., ",", ";", "\t")
+	FailFast     bool     // Stop after first error
+	Format       string   // Output format: "pretty" or "json"
+	Output       string   // Output file path (if empty, write to writer)
+	Filename     string   // Logical filename for schema resolution (used if reading from stream)
+	SchemaPath   string   // Path to JSON schema file (optional)
+	SchemaReader io.Reader // Optional: read JSON schema from this stream; takes precedence over SchemaPath when set
 }
 
 // LintAdvanced validates a CSV stream with advanced options, matching CLI capabilities.
@@ -47,23 +49,28 @@ func LintAdvanced(r io.Reader, opts Options, writer io.Writer) error {
 		name = "STDIN"
 	}
 
-	// Schema resolution logic
-	schemaPath := opts.SchemaPath
-	if schemaPath != "" {
-		// If schemaPath is set, check if file exists
-		if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
-			return fmt.Errorf("Schema file '%s' does not exist", schemaPath)
-		}
-	} else if opts.Filename != "" {
-		schemaPath = schema.ResolveSchema(opts.Filename)
-	}
-
+	// Schema resolution logic: SchemaReader takes precedence over SchemaPath
 	var schemaValidator *schema.Validator
 	var err error
-	if schemaPath != "" {
-		schemaValidator, err = schema.NewValidator(schemaPath)
+	if opts.SchemaReader != nil {
+		schemaValidator, err = schema.NewValidatorFromReader(opts.SchemaReader)
 		if err != nil {
 			return err
+		}
+	} else {
+		schemaPath := opts.SchemaPath
+		if schemaPath != "" {
+			if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
+				return fmt.Errorf("Schema file '%s' does not exist", schemaPath)
+			}
+		} else if opts.Filename != "" {
+			schemaPath = schema.ResolveSchema(opts.Filename)
+		}
+		if schemaPath != "" {
+			schemaValidator, err = schema.NewValidator(schemaPath)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
