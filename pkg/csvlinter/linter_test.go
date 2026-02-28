@@ -203,6 +203,83 @@ func TestLintAdvanced(t *testing.T) {
 	})
 }
 
+const schemaFromReaderJSON = `{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"name":{"type":"string","minLength":1},"age":{"type":"string","pattern":"^[0-9]+$"},"email":{"type":"string","format":"email"},"city":{"type":"string","minLength":1}},"required":["name","age","email","city"],"additionalProperties":false}`
+
+const validCSVForSchema = "name,age,email,city\nJohn Doe,30,john@example.com,New York\nJane Smith,25,jane@example.com,Los Angeles\n"
+
+const invalidCSVForSchema = "name,age,email,city\nJohn Doe,abc,john@example.com,New York\nJane Smith,25,not-an-email,Los Angeles\n"
+
+func TestLintAdvanced_SchemaFromReader(t *testing.T) {
+	t.Run("valid CSV with schema from reader", func(t *testing.T) {
+		opts := Options{
+			SchemaReader: strings.NewReader(schemaFromReaderJSON),
+			Delimiter:    ",",
+			Format:       "json",
+			Filename:     "test.csv",
+		}
+		var buf bytes.Buffer
+		err := LintAdvanced(strings.NewReader(validCSVForSchema), opts, &buf)
+		if err != nil {
+			t.Fatalf("LintAdvanced failed: %v", err)
+		}
+		var results map[string]interface{}
+		if err := json.Unmarshal(buf.Bytes(), &results); err != nil {
+			t.Fatalf("Expected valid JSON output: %v", err)
+		}
+		if valid, ok := results["valid"].(bool); !ok || !valid {
+			t.Errorf("Expected valid result, got: %v", results["valid"])
+		}
+		used, _ := results["schema_used"].(bool)
+		if !used {
+			t.Errorf("Expected schema_used true when using SchemaReader")
+		}
+	})
+
+	t.Run("invalid CSV with schema from reader", func(t *testing.T) {
+		opts := Options{
+			SchemaReader: strings.NewReader(schemaFromReaderJSON),
+			Delimiter:    ",",
+			Format:       "json",
+			Filename:     "test.csv",
+		}
+		var buf bytes.Buffer
+		err := LintAdvanced(strings.NewReader(invalidCSVForSchema), opts, &buf)
+		if err != nil {
+			t.Fatalf("LintAdvanced failed: %v", err)
+		}
+		var results map[string]interface{}
+		if err := json.Unmarshal(buf.Bytes(), &results); err != nil {
+			t.Fatalf("Expected valid JSON output: %v", err)
+		}
+		errs, ok := results["errors"].([]interface{})
+		if !ok || len(errs) < 1 {
+			t.Errorf("Expected validation errors, got %d", len(errs))
+		}
+	})
+
+	t.Run("SchemaReader takes precedence over SchemaPath", func(t *testing.T) {
+		opts := Options{
+			SchemaReader: strings.NewReader(schemaFromReaderJSON),
+			SchemaPath:   "nonexistent.json",
+			Delimiter:    ",",
+			Format:       "json",
+			Filename:     "test.csv",
+		}
+		var buf bytes.Buffer
+		err := LintAdvanced(strings.NewReader(validCSVForSchema), opts, &buf)
+		if err != nil {
+			t.Fatalf("SchemaReader should take precedence; LintAdvanced failed: %v", err)
+		}
+		var results map[string]interface{}
+		if err := json.Unmarshal(buf.Bytes(), &results); err != nil {
+			t.Fatalf("Expected valid JSON output: %v", err)
+		}
+		if valid, ok := results["valid"].(bool); !ok || !valid {
+			t.Errorf("Expected valid result when schema from reader, got: %v", results["valid"])
+		}
+	})
+}
+
 func TestLintAdvanced_AllOptions(t *testing.T) {
 	csvPath := "../../testdata/valid_sample.csv"
 	semicolonPath := "../../testdata/valid_semis.csv"

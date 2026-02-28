@@ -288,6 +288,7 @@ The public API is available in `pkg/csvlinter` and supports validating CSV data 
 import (
     "os"
     "bytes"
+    "strings"
     "github.com/csvlinter/csvlinter/pkg/csvlinter"
 )
 
@@ -299,14 +300,24 @@ results, err := csvlinter.Lint(f, "file.csv", ",")
 csvFile, _ := os.Open("file.csv")
 results, err := csvlinter.LintWithSchema(csvFile, "file.csv", ",", "schema.json")
 
+// Validate CSV with schema from memory/stream (no schema file on disk)
+schemaJSON := `{"type":"object","properties":{"id":{"type":"integer"},"name":{"type":"string"}},"required":["id","name"]}`
+optsInMem := csvlinter.Options{
+    SchemaReader: strings.NewReader(schemaJSON),
+    Delimiter:    ",",
+    Format:       "json",
+    Filename:     "data.csv",
+}
+err = csvlinter.LintAdvanced(strings.NewReader(csvContent), optsInMem, &buf)
+
 // Advanced: Use Options struct for full control
 opts := csvlinter.Options{
-    Delimiter:  ";",                // Custom delimiter
-    FailFast:   true,                // Stop after first error
-    Format:     "json",             // Output format: "pretty" or "json"
-    Output:     "results.json",     // Output file (leave empty for stdout/writer)
-    Filename:   "data.csv",         // Logical filename for schema resolution
-    SchemaPath: "schema.json",      // Optional: explicit schema path
+    Delimiter:   ";",                // Custom delimiter
+    FailFast:    true,               // Stop after first error
+    Format:      "json",             // Output format: "pretty" or "json"
+    Output:      "results.json",     // Output file (leave empty for stdout/writer)
+    Filename:    "data.csv",         // Logical filename for schema resolution
+    SchemaPath:  "schema.json",      // Optional: explicit schema file path
 }
 f2, _ := os.Open("file.csv")
 var buf bytes.Buffer
@@ -318,7 +329,7 @@ err = csvlinter.LintAdvanced(f2, opts, &buf) // Output written to buf if Output 
 - `LintWithSchema(r io.Reader, name string, delimiter string, schemaPath string)`
 - `LintAdvanced(r io.Reader, opts Options, writer io.Writer)`
 
-You can use any stream (file, network, in-memory, etc.) for both CSV and schema data.
+CSV input can be any stream (file, network, in-memory, etc.). Schema can be supplied the same way via `Options.SchemaReader` (e.g. `strings.NewReader(schemaJSON)`), or from a file path with `Options.SchemaPath` or automatic resolution from `Options.Filename`.
 
 ## RFC 4180 Compliance
 
