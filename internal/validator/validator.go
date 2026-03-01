@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -69,23 +70,22 @@ func (v *Validator) Validate() (*Results, error) {
 	}
 	defer p.Close()
 
-	// Validate UTF-8 encoding
-	if err := p.ValidateUTF8(); err != nil {
-		return &Results{
-			File:     v.name,
-			Valid:    false,
-			Errors:   []Error{{Message: err.Error(), Type: "encoding"}},
-			Duration: time.Since(startTime).String(),
-		}, nil
-	}
-
-	// Read headers
+	// Read headers (UTF-8 validated inside ReadHeaders when streaming)
 	headers, err := p.ReadHeaders()
 	if err != nil {
+		var encErr *parser.EncodingError
+		if errors.As(err, &encErr) {
+			return &Results{
+				File:     v.name,
+				Valid:    false,
+				Errors:   []Error{{LineNumber: encErr.LineNumber, Message: "invalid UTF-8 encoding", Type: "encoding"}},
+				Duration: time.Since(startTime).String(),
+			}, nil
+		}
 		return nil, fmt.Errorf("failed to read headers: %w", err)
 	}
 
-	var errors []Error
+	var errs []Error
 	var warnings []Warning
 	totalRows := 0
 
@@ -96,11 +96,19 @@ func (v *Validator) Validate() (*Results, error) {
 			if err == io.EOF {
 				break
 			}
-			// This is a fatal parsing error. Report it and stop processing.
-			errors = append(errors, Error{
-				LineNumber: p.GetLineNumber() + 1, // Error occurs on the next line
-				Message:    err.Error(),
-				Type:       "structure",
+			var encErr *parser.EncodingError
+			errType := "structure"
+			errMsg := err.Error()
+			lineNum := p.GetLineNumber() + 1
+			if errors.As(err, &encErr) {
+				errType = "encoding"
+				errMsg = "invalid UTF-8 encoding"
+				lineNum = encErr.LineNumber
+			}
+			errs = append(errs, Error{
+				LineNumber: lineNum,
+				Message:    errMsg,
+				Type:       errType,
 			})
 			break
 		}
@@ -114,7 +122,7 @@ func (v *Validator) Validate() (*Results, error) {
 
 		// Basic structure validation
 		if len(row.Data) != len(headers) {
-			errors = append(errors, Error{
+			errs = append(errs, Error{
 				LineNumber: row.LineNumber,
 				Field:      "row",
 				Message:    fmt.Sprintf("column count mismatch: expected %d, got %d", len(headers), len(row.Data)),
@@ -136,7 +144,7 @@ func (v *Validator) Validate() (*Results, error) {
 			}
 
 			for _, schemaErr := range schemaErrors {
-				errors = append(errors, Error{
+				errs = append(errs, Error{
 					LineNumber: row.LineNumber,
 					Field:      schemaErr.Field,
 					Message:    schemaErr.Message,
@@ -147,18 +155,18 @@ func (v *Validator) Validate() (*Results, error) {
 		}
 
 		// Fail fast if requested
-		if v.failFast && len(errors) > 0 {
+		if v.failFast && len(errs) > 0 {
 			break
 		}
 	}
 
 	duration := time.Since(startTime)
-	valid := len(errors) == 0
+	valid := len(errs) == 0
 
 	return &Results{
 		File:       v.name,
 		TotalRows:  totalRows,
-		Errors:     errors,
+		Errors:     errs,
 		Warnings:   warnings,
 		Duration:   duration.String(),
 		Valid:      valid,

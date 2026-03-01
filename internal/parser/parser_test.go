@@ -58,7 +58,7 @@ func TestParser(t *testing.T) {
 			name:          "Invalid UTF-8",
 			input:         "name,email\nJohn,john@example.com\n" + string([]byte{0xFF, 0xFE, 0xFD}),
 			delimiter:     ",",
-			expectHeaders: nil,
+			expectHeaders: []string{"name", "email"},
 			expectRows:    nil,
 			expectError:   true,
 		},
@@ -75,15 +75,6 @@ func TestParser(t *testing.T) {
 				return
 			}
 			defer p.Close()
-
-			// Validate UTF-8
-			err = p.ValidateUTF8()
-			if err != nil {
-				if !tc.expectError {
-					t.Fatalf("Unexpected UTF-8 validation error: %v", err)
-				}
-				return
-			}
 
 			// Read headers
 			headers, err := p.ReadHeaders()
