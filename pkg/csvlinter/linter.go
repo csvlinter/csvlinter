@@ -12,36 +12,25 @@ import (
 	"github.com/csvlinter/csvlinter/internal/validator"
 )
 
-// Package csvlinter provides a public API for validating CSV files from any io.Reader, with or without a schema.
-//
-// Example usage:
-//
-//   // Validate CSV without schema
-//   f, _ := os.Open("file.csv")
-//   results, err := csvlinter.Lint(f, "file.csv", ",")
-//
-//   // Validate CSV with schema from stream (no file on disk)
-//   csvReader := strings.NewReader(csvContent)
-//   schemaReader := strings.NewReader(schemaJSON)
-//   opts := csvlinter.Options{SchemaReader: schemaReader, Delimiter: ",", Format: "json", Filename: "data.csv"}
-//   var buf bytes.Buffer
-//   err := csvlinter.LintAdvanced(csvReader, opts, &buf)
-
-// Options defines advanced options for CSV linting.
+// Options configures CSV validation and output for LintAdvanced.
+// Delimiter defaults to "," and Format to "pretty" when empty.
 type Options struct {
-	Delimiter    string   // Field delimiter (e.g., ",", ";", "\t")
-	FailFast     bool     // Stop after first error
-	Format       string   // Output format: "pretty" or "json"
-	Output       string   // Output file path (if empty, write to writer)
-	Filename     string   // Logical filename for schema resolution (used if reading from stream)
-	SchemaPath   string   // Path to JSON schema file (optional)
+	Delimiter    string    // Field delimiter (e.g., ",", ";", "\t")
+	FailFast     bool      // Stop after first error
+	Format       string    // Output format: "pretty" or "json"
+	Output       string    // Output file path (if empty, write to writer)
+	Filename     string    // Logical filename for schema resolution (used if reading from stream)
+	SchemaPath   string    // Path to JSON schema file (optional)
 	SchemaReader io.Reader // Optional: read JSON schema from this stream; takes precedence over SchemaPath when set
 }
 
-// LintAdvanced validates a CSV stream with advanced options, matching CLI capabilities.
-// r: CSV data stream
-// opts: advanced options (see Options struct)
-// writer: where to write output (if opts.Output is empty)
+// LintAdvanced validates a CSV stream with full control over schema, format, and output.
+// CSV is read from r; formatted results are written to writer unless opts.Output is set,
+// in which case output is written to that file. Schema may be provided via
+// opts.SchemaReader (takes precedence) or opts.SchemaPath. If neither is set and
+// opts.Filename is set, schema resolution looks for <filename>.schema.json or csvlinter.schema.json
+// in the same directory, then csvlinter.schema.json in parent directories up to a project root
+// (.git or package.json) or system root.
 func LintAdvanced(r io.Reader, opts Options, writer io.Writer) error {
 	// Determine name for reporting
 	name := opts.Filename
@@ -100,7 +89,11 @@ func LintAdvanced(r io.Reader, opts Options, writer io.Writer) error {
 	return rep.Report(results, writer)
 }
 
-// Lint validates a CSV stream without a schema (backward compatible).
+// Lint validates a CSV stream and returns structured results.
+// It does not take an explicit schema path; a schema may still be auto-resolved from name
+// when name looks like a file path (see LintAdvanced for resolution rules). name is used for
+// reporting (e.g. filename or "STDIN"); delimiter is the field separator (e.g. "," or ";").
+// Returns results with File, TotalRows, Errors, Warnings, Duration, Valid; caller can check results.Valid and results.Errors.
 func Lint(r io.Reader, name string, delimiter string) (*validator.Results, error) {
 	opts := Options{
 		Delimiter: delimiter,
@@ -121,7 +114,9 @@ func Lint(r io.Reader, name string, delimiter string) (*validator.Results, error
 	return &results, nil
 }
 
-// LintWithSchema validates a CSV stream with a schema loaded from a file (backward compatible).
+// LintWithSchema validates a CSV stream against a JSON Schema file at schemaPath.
+// name is used for reporting; delimiter is the field separator. Returns the same
+// results shape as Lint, with SchemaUsed true when the schema was applied.
 func LintWithSchema(r io.Reader, name string, delimiter string, schemaPath string) (*validator.Results, error) {
 	opts := Options{
 		Delimiter:  delimiter,
