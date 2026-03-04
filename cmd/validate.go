@@ -58,9 +58,17 @@ var validateCommand = &cli.Command{
 	Action: validateAction,
 }
 
+func exitError(c *cli.Context, format, msg string) error {
+	if format == "json" {
+		fmt.Fprintf(c.App.Writer, `{"errors":[{"line_number":1,"message":%q}]}`+"\n", msg)
+		return cli.Exit("", 1)
+	}
+	return cli.Exit(msg, 1)
+}
+
 func validateAction(c *cli.Context) error {
 	if c.NArg() < 1 {
-		return cli.Exit("Error: CSV file path or - for STDIN is required", 1)
+		return exitError(c, c.String("format"), "Error: CSV file path or - for STDIN is required")
 	}
 
 	csvPath := c.Args().Get(0)
@@ -87,7 +95,7 @@ func validateAction(c *cli.Context) error {
 		// Validate input file exists
 		file, err := os.Open(csvPath)
 		if err != nil {
-			return cli.Exit(fmt.Sprintf("Error: Cannot open file '%s': %v", csvPath, err), 1)
+			return exitError(c, format, fmt.Sprintf("Error: Cannot open file '%s': %v", csvPath, err))
 		}
 		defer file.Close()
 		input = file
@@ -108,13 +116,13 @@ func validateAction(c *cli.Context) error {
 	var schemaValidator *schema.Validator
 	if schemaPath != "" {
 		if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
-			return cli.Exit(fmt.Sprintf("Error: Schema file '%s' does not exist", schemaPath), 1)
+			return exitError(c, format, fmt.Sprintf("Error: Schema file '%s' does not exist", schemaPath))
 		}
 
 		var err error
 		schemaValidator, err = schema.NewValidator(schemaPath)
 		if err != nil {
-			return cli.Exit(fmt.Sprintf("Error loading schema: %v", err), 1)
+			return exitError(c, format, fmt.Sprintf("Error loading schema: %v", err))
 		}
 	}
 
@@ -129,7 +137,7 @@ func validateAction(c *cli.Context) error {
 	// Run validation
 	results, err := v.Validate()
 	if err != nil {
-		return cli.Exit(fmt.Sprintf("Error during validation: %v", err), 1)
+		return exitError(c, format, fmt.Sprintf("Error during validation: %v", err))
 	}
 
 	// Create reporter
