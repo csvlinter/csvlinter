@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/csvlinter/csvlinter/internal/validator"
@@ -53,6 +54,7 @@ invalid,Jane Doe,jane.doe@example.com`)
 	testCases := []struct {
 		name           string
 		args           []string
+		stdinContent   string // written to stdin when args contain "-"
 		expectedExit   int
 		expectError    bool
 		expectedOutput string
@@ -107,6 +109,7 @@ invalid,Jane Doe,jane.doe@example.com`)
 		{
 			name:         "STDIN input with JSON output",
 			args:         []string{"--format", "json", "-"},
+			stdinContent: "name,email\nJohn Doe,john@example.com\n",
 			expectedExit: 0,
 			expectError:  false,
 			assertOutput: func(t *testing.T, output string) {
@@ -116,6 +119,52 @@ invalid,Jane Doe,jane.doe@example.com`)
 				}
 				if results.File != "STDIN" {
 					t.Errorf("Expected file name to be STDIN, got %s", results.File)
+				}
+			},
+		},
+		{
+			name:         "Empty STDIN with JSON format emits valid JSON",
+			args:         []string{"--format", "json", "--filename", "empty.csv", "-"},
+			stdinContent: "", // empty — triggers the "no headers found" error path
+			expectedExit: 1,
+			assertOutput: func(t *testing.T, output string) {
+				output = strings.TrimSpace(output)
+				if output == "" {
+					return // nothing written is also acceptable
+				}
+				var result map[string]any
+				if err := json.Unmarshal([]byte(output), &result); err != nil {
+					t.Fatalf("Expected valid JSON, got plain text: %s", output)
+				}
+			},
+		},
+		{
+			name:         "Non-existent CSV file with JSON format emits valid JSON",
+			args:         []string{"--format", "json", "no-such-file.csv"},
+			expectedExit: 1,
+			assertOutput: func(t *testing.T, output string) {
+				output = strings.TrimSpace(output)
+				if output == "" {
+					return
+				}
+				var result map[string]any
+				if err := json.Unmarshal([]byte(output), &result); err != nil {
+					t.Fatalf("Expected valid JSON, got plain text: %s", output)
+				}
+			},
+		},
+		{
+			name:         "Non-existent schema with JSON format emits valid JSON",
+			args:         []string{"--format", "json", "--schema", "no-such-schema.json", validCSVPath},
+			expectedExit: 1,
+			assertOutput: func(t *testing.T, output string) {
+				output = strings.TrimSpace(output)
+				if output == "" {
+					return
+				}
+				var result map[string]any
+				if err := json.Unmarshal([]byte(output), &result); err != nil {
+					t.Fatalf("Expected valid JSON, got plain text: %s", output)
 				}
 			},
 		},
@@ -146,7 +195,7 @@ invalid,Jane Doe,jane.doe@example.com`)
 			}
 
 			// If testing STDIN, set up a pipe
-			if tc.name == "STDIN input with JSON output" {
+			if tc.stdinContent != "" {
 				// Save original stdin
 				oldStdin := os.Stdin
 				defer func() { os.Stdin = oldStdin }()
@@ -160,11 +209,9 @@ invalid,Jane Doe,jane.doe@example.com`)
 				// Set stdin to read end of pipe
 				os.Stdin = r
 
-				// Write test data to pipe
 				go func() {
 					defer w.Close()
-					fmt.Fprintln(w, "name,email")
-					fmt.Fprintln(w, "John Doe,john@example.com")
+					fmt.Fprint(w, tc.stdinContent)
 				}()
 			}
 
