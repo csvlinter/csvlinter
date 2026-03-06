@@ -11,6 +11,8 @@ builds:
       - arm64
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/csvlinter/csvlinter/cmd.Version={{.Version}}
 
 archives:
   - id: binaries
@@ -34,5 +36,5 @@ brews:
       bin.install "csvlinter"
     test: |
       (testpath/"bad.csv").write("col\nbad")
-      output = shell_output("#{bin}/csvlinter bad.csv", 1)
+      output = shell_output("#{bin}/csvlinter validate bad.csv", 1)
       assert_match "Row 2", output
