@@ -31,7 +31,7 @@ brew tap csvlinter/tap && brew install csvlinter
 ### From source
 
 ```bash
-git clone https://github.com/yourusername/csvlinter.git
+git clone https://github.com/csvlinter/csvlinter.git
 cd csvlinter
 go build -o csvlinter
 ```
@@ -39,7 +39,7 @@ go build -o csvlinter
 ### Using Go
 
 ```bash
-go install github.com/yourusername/csvlinter@latest
+go install github.com/csvlinter/csvlinter@latest
 ```
 
 ## Usage
@@ -94,8 +94,8 @@ csvlinter validate data.csv -o results.json -f json
 # Fail-fast mode for CI
 csvlinter validate data.csv --fail-fast
 
-# Exit with error code on validation failure
-csvlinter validate data.csv || exit 1
+# csvlinter exits with code 1 when validation fails, so CI pipelines fail automatically
+csvlinter validate data.csv
 ```
 
 ### STDIN support
@@ -245,6 +245,8 @@ Errors (2):
 - **encoding**: UTF-8 encoding problems
 
 ## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run tests, open PRs, and use Conventional Commits. By participating, you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 1. Fork the repository
 2. Create a feature branch
