@@ -1,6 +1,6 @@
 module github.com/csvlinter/csvlinter
 
-go 1.20
+go 1.21
 
 require (
 	github.com/mattn/go-isatty v0.0.20

@@ -32,7 +32,6 @@ jobs:
           branches: |
             main
 
-
   release:
     needs: calculate-version
     if: needs.calculate-version.outputs.should_release == 'true'
@@ -42,11 +41,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: "1.22"
 
       - name: Create Git Tag
         run: |
@@ -56,7 +55,6 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
-          # The 'release' command will pick up the latest tag automatically
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}
