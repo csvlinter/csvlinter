@@ -41,11 +41,11 @@ This will generate large CSVs in benchmarks/, run all tools, and update this ben
 |----------|------------------|----------|--------------|
 | csvlinter | Valid | .53 | 198 |
 | csvlinter | Invalid | .60 | 197 |
-| csvlinter | Valid+Schema (should fail) | .22 | 199 |
+| csvlinter | Valid+Schema | .22 | 199 |
 | csvkit | Valid | 15.36 | 743 |
 | csvkit | Invalid | 9.38 | 620 |
-| csvkit | Valid+Schema (should fail) | 9.64 | 743 |
+| csvkit | Valid+Schema | 9.64 | 743 |
 | csvlint | Valid | 51.04 | 706 |
 | csvlint | Invalid | 50.76 | 703 |
-| csvlint | Valid+Schema (should fail) | 49.96 | 705 |
+| csvlint | Valid+Schema | 49.96 | 705 |
  
