@@ -148,5 +148,11 @@ func validateAction(c *cli.Context) error {
 		return cli.Exit(fmt.Sprintf("Error writing output: %v", err), 1)
 	}
 
+	if !results.Valid {
+		if format == "json" {
+			return cli.Exit("", 1)
+		}
+		return cli.Exit("validation failed", 1)
+	}
 	return nil
 }

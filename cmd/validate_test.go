@@ -78,8 +78,8 @@ invalid,Jane Doe,jane.doe@example.com`)
 		{
 			name:         "Validation failure with JSON output",
 			args:         []string{"--schema", schemaPath, "--format", "json", invalidCSVPath},
-			expectedExit: 0,
-			expectError:  false,
+			expectedExit: 1,
+			expectError:  true,
 			assertOutput: func(t *testing.T, output string) {
 				var results validator.Results
 				if err := json.Unmarshal([]byte(output), &results); err != nil {
