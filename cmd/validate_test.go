@@ -95,6 +95,17 @@ invalid,Jane Doe,jane.doe@example.com`)
 			},
 		},
 		{
+			name:         "Validation failure with pretty output exits 1",
+			args:         []string{"--schema", schemaPath, "--format", "pretty", invalidCSVPath},
+			expectedExit: 1,
+			expectError:  true,
+			assertOutput: func(t *testing.T, output string) {
+				if !strings.Contains(output, "INVALID") {
+					t.Errorf("Expected pretty output to contain INVALID, got: %s", output)
+				}
+			},
+		},
+		{
 			name:         "Non-existent CSV file",
 			args:         []string{"non-existent.csv"},
 			expectedExit: 1,

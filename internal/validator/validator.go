@@ -30,32 +30,35 @@ type Warning struct {
 
 // Results contains the validation results
 type Results struct {
-	File       string    `json:"file"`
-	TotalRows  int       `json:"total_rows"`
-	Errors     []Error   `json:"errors"`
-	Warnings   []Warning `json:"warnings"`
-	Duration   string    `json:"duration"`
-	Valid      bool      `json:"valid"`
-	SchemaUsed bool      `json:"schema_used"`
+	File            string    `json:"file"`
+	TotalRows       int       `json:"total_rows"`
+	Errors          []Error   `json:"errors"`
+	Warnings        []Warning `json:"warnings"`
+	Duration        string    `json:"duration"`
+	Valid           bool      `json:"valid"`
+	SchemaUsed      bool      `json:"schema_used"`
+	SchemaInferred  bool      `json:"schema_inferred,omitempty"`
 }
 
 // Validator represents the main validation engine
 type Validator struct {
-	input           io.Reader
-	name            string
-	delimiter       string
-	schemaValidator *schema.Validator
-	failFast        bool
+	input            io.Reader
+	name             string
+	delimiter        string
+	schemaValidator  *schema.Validator
+	failFast         bool
+	schemaInferred   bool
 }
 
-// New creates a new validator
-func New(input io.Reader, name string, delimiter string, schemaValidator *schema.Validator, failFast bool) *Validator {
+// New creates a new validator. schemaInferred should be true when the schema was inferred from data rather than loaded from file.
+func New(input io.Reader, name string, delimiter string, schemaValidator *schema.Validator, failFast bool, schemaInferred bool) *Validator {
 	return &Validator{
 		input:           input,
 		name:            name,
 		delimiter:       delimiter,
 		schemaValidator: schemaValidator,
 		failFast:        failFast,
+		schemaInferred:  schemaInferred,
 	}
 }
 
@@ -164,12 +167,13 @@ func (v *Validator) Validate() (*Results, error) {
 	valid := len(errs) == 0
 
 	return &Results{
-		File:       v.name,
-		TotalRows:  totalRows,
-		Errors:     errs,
-		Warnings:   warnings,
-		Duration:   duration.String(),
-		Valid:      valid,
-		SchemaUsed: v.schemaValidator != nil,
+		File:           v.name,
+		TotalRows:      totalRows,
+		Errors:         errs,
+		Warnings:       warnings,
+		Duration:       duration.String(),
+		Valid:          valid,
+		SchemaUsed:     v.schemaValidator != nil,
+		SchemaInferred: v.schemaInferred,
 	}, nil
 }
