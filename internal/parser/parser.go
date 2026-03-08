@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"bytes"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -123,4 +124,42 @@ func (p *Parser) ReadRow() (*Row, error) {
 // GetLineNumber returns the current line number
 func (p *Parser) GetLineNumber() int {
 	return p.lineNumber
+}
+
+// ReadSampleFromBytes parses CSV from b and returns headers and up to maxRows non-empty data rows.
+// Used for schema inference. Returns error on empty input or invalid UTF-8.
+func ReadSampleFromBytes(b []byte, delimiter string, maxRows int) (headers []string, sample [][]string, err error) {
+	if delimiter == "" {
+		return nil, nil, fmt.Errorf("delimiter cannot be empty")
+	}
+	rd := csv.NewReader(bytes.NewReader(b))
+	rd.Comma = rune(delimiter[0])
+	rd.FieldsPerRecord = -1
+	headers, err = rd.Read()
+	if err != nil {
+		if err == io.EOF {
+			return nil, nil, fmt.Errorf("empty input: no headers found")
+		}
+		return nil, nil, fmt.Errorf("failed to read headers: %w", err)
+	}
+	if !validUTF8Strings(headers) {
+		return nil, nil, &EncodingError{LineNumber: 1, Err: ErrInvalidUTF8}
+	}
+	for len(sample) < maxRows {
+		record, readErr := rd.Read()
+		if readErr == io.EOF {
+			return headers, sample, nil
+		}
+		if readErr != nil {
+			return nil, nil, readErr
+		}
+		if !validUTF8Strings(record) {
+			return nil, nil, &EncodingError{LineNumber: 1 + 1 + len(sample), Err: ErrInvalidUTF8}
+		}
+		row := &Row{Data: record}
+		if !row.IsEmpty() {
+			sample = append(sample, record)
+		}
+	}
+	return headers, sample, nil
 }

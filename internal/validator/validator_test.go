@@ -50,7 +50,7 @@ func TestValidator(t *testing.T) {
 			}
 			defer file.Close()
 
-			validator := New(file, absPath, ",", nil, true)
+			validator := New(file, absPath, ",", nil, true, false)
 			results, err := validator.Validate()
 
 			if tc.expectSuccess && err != nil {

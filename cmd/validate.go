@@ -5,9 +5,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/csvlinter/csvlinter/internal/reporter"
+	"github.com/csvlinter/csvlinter/pkg/csvlinter"
 	"github.com/csvlinter/csvlinter/internal/schema"
-	"github.com/csvlinter/csvlinter/internal/validator"
 
 	"github.com/urfave/cli/v2"
 )
@@ -54,6 +53,14 @@ var validateCommand = &cli.Command{
 			Name:  "filename",
 			Usage: "Logical filename to use for schema resolution and reporting when reading from STDIN",
 		},
+		&cli.BoolFlag{
+			Name:  "infer-schema",
+			Usage: "Infer JSON Schema from CSV data when no schema file is provided; validate against inferred schema",
+		},
+		&cli.StringFlag{
+			Name:  "infer-schema-output",
+			Usage: "When using --infer-schema, write the inferred schema to this path",
+		},
 	},
 	Action: validateAction,
 }
@@ -72,11 +79,8 @@ func validateAction(c *cli.Context) error {
 	}
 
 	csvPath := c.Args().Get(0)
-	schemaPath := c.String("schema")
-	outputPath := c.String("output")
 	format := c.String("format")
 	delimiter := c.String("delimiter")
-	failFast := c.Bool("fail-fast")
 	maxSize := c.Int64("max-size")
 	filename := c.String("filename")
 
@@ -84,7 +88,6 @@ func validateAction(c *cli.Context) error {
 	var name string
 
 	if csvPath == "-" {
-		// Read from STDIN with size limit
 		input = io.LimitReader(os.Stdin, maxSize)
 		if filename != "" {
 			name = filename
@@ -92,7 +95,6 @@ func validateAction(c *cli.Context) error {
 			name = "STDIN"
 		}
 	} else {
-		// Validate input file exists
 		file, err := os.Open(csvPath)
 		if err != nil {
 			return exitError(c, format, fmt.Sprintf("Error: Cannot open file '%s': %v", csvPath, err))
@@ -102,53 +104,39 @@ func validateAction(c *cli.Context) error {
 		name = csvPath
 	}
 
-	// Schema fallback logic
+	schemaPath := c.String("schema")
 	if schemaPath == "" {
 		if csvPath == "-" && filename != "" {
-			// Use provided logical filename for schema resolution
 			schemaPath = schema.ResolveSchema(filename)
 		} else if csvPath != "-" {
 			schemaPath = schema.ResolveSchema(csvPath)
 		}
 	}
-
-	// Validate schema file if provided
-	var schemaValidator *schema.Validator
 	if schemaPath != "" {
 		if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
 			return exitError(c, format, fmt.Sprintf("Error: Schema file '%s' does not exist", schemaPath))
 		}
-
-		var err error
-		schemaValidator, err = schema.NewValidator(schemaPath)
-		if err != nil {
-			return exitError(c, format, fmt.Sprintf("Error loading schema: %v", err))
-		}
 	}
 
-	// Validate format
 	if format != "pretty" && format != "json" {
 		return cli.Exit("Error: Format must be 'pretty' or 'json'", 1)
 	}
 
-	// Create validator
-	v := validator.New(input, name, delimiter, schemaValidator, failFast)
-
-	// Run validation
-	results, err := v.Validate()
+	opts := csvlinter.Options{
+		Delimiter:          delimiter,
+		FailFast:           c.Bool("fail-fast"),
+		Format:             format,
+		Output:             c.String("output"),
+		Filename:           name,
+		SchemaPath:         schemaPath,
+		InferSchema:        c.Bool("infer-schema"),
+		InferSchemaOutput:  c.String("infer-schema-output"),
+	}
+	results, err := csvlinter.LintAdvanced(input, opts, c.App.Writer)
 	if err != nil {
-		return exitError(c, format, fmt.Sprintf("Error during validation: %v", err))
+		return exitError(c, format, err.Error())
 	}
-
-	// Create reporter
-	r := reporter.New(format, outputPath)
-
-	// Output results
-	if err := r.Report(results, c.App.Writer); err != nil {
-		return cli.Exit(fmt.Sprintf("Error writing output: %v", err), 1)
-	}
-
-	if !results.Valid {
+	if results != nil && !results.Valid {
 		if format == "json" {
 			return cli.Exit("", 1)
 		}

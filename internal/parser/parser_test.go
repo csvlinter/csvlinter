@@ -229,3 +229,103 @@ func equalSlices(a, b []string) bool {
 	}
 	return true
 }
+
+func TestReadSampleFromBytes(t *testing.T) {
+	t.Run("headers and sample from small csv", func(t *testing.T) {
+		csv := []byte("id,name\n1,Alice\n2,Bob")
+		headers, sample, err := ReadSampleFromBytes(csv, ",", 10)
+		if err != nil {
+			t.Fatalf("ReadSampleFromBytes: %v", err)
+		}
+		if !equalSlices(headers, []string{"id", "name"}) {
+			t.Errorf("headers: got %v", headers)
+		}
+		if len(sample) != 2 {
+			t.Errorf("sample: want 2 rows, got %d", len(sample))
+		}
+		if len(sample) > 0 && !equalSlices(sample[0], []string{"1", "Alice"}) {
+			t.Errorf("sample[0]: got %v", sample[0])
+		}
+		if len(sample) > 1 && !equalSlices(sample[1], []string{"2", "Bob"}) {
+			t.Errorf("sample[1]: got %v", sample[1])
+		}
+	})
+
+	t.Run("respects maxRows", func(t *testing.T) {
+		csv := []byte("a,b\n1,x\n2,y\n3,z")
+		headers, sample, err := ReadSampleFromBytes(csv, ",", 2)
+		if err != nil {
+			t.Fatalf("ReadSampleFromBytes: %v", err)
+		}
+		if !equalSlices(headers, []string{"a", "b"}) {
+			t.Errorf("headers: got %v", headers)
+		}
+		if len(sample) != 2 {
+			t.Errorf("sample: want 2 rows (maxRows=2), got %d", len(sample))
+		}
+	})
+
+	t.Run("skips empty rows", func(t *testing.T) {
+		csv := []byte("x,y\n1,a\n\n\n2,b")
+		headers, sample, err := ReadSampleFromBytes(csv, ",", 10)
+		if err != nil {
+			t.Fatalf("ReadSampleFromBytes: %v", err)
+		}
+		if !equalSlices(headers, []string{"x", "y"}) {
+			t.Errorf("headers: got %v", headers)
+		}
+		if len(sample) != 2 {
+			t.Errorf("sample: want 2 non-empty rows, got %d", len(sample))
+		}
+		if len(sample) > 0 && !equalSlices(sample[0], []string{"1", "a"}) {
+			t.Errorf("sample[0]: got %v", sample[0])
+		}
+		if len(sample) > 1 && !equalSlices(sample[1], []string{"2", "b"}) {
+			t.Errorf("sample[1]: got %v", sample[1])
+		}
+	})
+
+	t.Run("empty input error", func(t *testing.T) {
+		_, _, err := ReadSampleFromBytes([]byte{}, ",", 10)
+		if err == nil {
+			t.Fatal("expected error for empty input")
+		}
+	})
+
+	t.Run("headers only returns empty sample", func(t *testing.T) {
+		csv := []byte("a,b,c")
+		headers, sample, err := ReadSampleFromBytes(csv, ",", 10)
+		if err != nil {
+			t.Fatalf("ReadSampleFromBytes: %v", err)
+		}
+		if !equalSlices(headers, []string{"a", "b", "c"}) {
+			t.Errorf("headers: got %v", headers)
+		}
+		if len(sample) != 0 {
+			t.Errorf("sample: want 0 rows, got %d", len(sample))
+		}
+	})
+
+	t.Run("same bytes second read gives same result", func(t *testing.T) {
+		csv := []byte("id,name\n1,Alice\n2,Bob")
+		h1, s1, err1 := ReadSampleFromBytes(csv, ",", 10)
+		if err1 != nil {
+			t.Fatalf("first read: %v", err1)
+		}
+		h2, s2, err2 := ReadSampleFromBytes(csv, ",", 10)
+		if err2 != nil {
+			t.Fatalf("second read: %v", err2)
+		}
+		if !equalSlices(h1, h2) {
+			t.Errorf("headers differ: %v vs %v", h1, h2)
+		}
+		if len(s1) != len(s2) {
+			t.Errorf("sample length differ: %d vs %d", len(s1), len(s2))
+		}
+		for i := range s1 {
+			if !equalSlices(s1[i], s2[i]) {
+				t.Errorf("sample row %d differ: %v vs %v", i, s1[i], s2[i])
+			}
+		}
+	})
+}

@@ -106,7 +106,7 @@ func TestLintAdvanced(t *testing.T) {
 			Filename:  csvPath,
 		}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -123,7 +123,7 @@ func TestLintAdvanced(t *testing.T) {
 			Filename:  csvPath,
 		}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -143,7 +143,7 @@ func TestLintAdvanced(t *testing.T) {
 			Output:    outputPath,
 			Filename:  csvPath,
 		}
-		err := LintAdvanced(bytes.NewReader(csvData), opts, nil)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, nil)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -166,7 +166,7 @@ func TestLintAdvanced(t *testing.T) {
 			Filename:  invalidPath,
 		}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(invalidData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(invalidData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -188,7 +188,7 @@ func TestLintAdvanced(t *testing.T) {
 			Filename:  csvPath, // should resolve schema automatically
 		}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -218,7 +218,7 @@ func TestLintAdvanced_SchemaFromReader(t *testing.T) {
 			Filename:     "test.csv",
 		}
 		var buf bytes.Buffer
-		err := LintAdvanced(strings.NewReader(validCSVForSchema), opts, &buf)
+		_, err := LintAdvanced(strings.NewReader(validCSVForSchema), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -243,7 +243,7 @@ func TestLintAdvanced_SchemaFromReader(t *testing.T) {
 			Filename:     "test.csv",
 		}
 		var buf bytes.Buffer
-		err := LintAdvanced(strings.NewReader(invalidCSVForSchema), opts, &buf)
+		_, err := LintAdvanced(strings.NewReader(invalidCSVForSchema), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -266,7 +266,7 @@ func TestLintAdvanced_SchemaFromReader(t *testing.T) {
 			Filename:     "test.csv",
 		}
 		var buf bytes.Buffer
-		err := LintAdvanced(strings.NewReader(validCSVForSchema), opts, &buf)
+		_, err := LintAdvanced(strings.NewReader(validCSVForSchema), opts, &buf)
 		if err != nil {
 			t.Fatalf("SchemaReader should take precedence; LintAdvanced failed: %v", err)
 		}
@@ -292,7 +292,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	t.Run("Delimiter: semicolon", func(t *testing.T) {
 		opts := Options{Delimiter: ";", Format: "json", Filename: semicolonPath}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(semicolonData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(semicolonData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -305,7 +305,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	t.Run("Delimiter: tab", func(t *testing.T) {
 		opts := Options{Delimiter: "\t", Format: "json", Filename: tabPath}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(tabData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(tabData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -322,7 +322,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 		// With fail-fast
 		optsFF := Options{Delimiter: ",", FailFast: true, Format: "json", Filename: invalidSamplePath, SchemaPath: schemaPath}
 		var bufFF bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(invalidSampleData), optsFF, &bufFF)
+		_, err := LintAdvanced(bytes.NewReader(invalidSampleData), optsFF, &bufFF)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -333,7 +333,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 		// Without fail-fast
 		optsNF := Options{Delimiter: ",", FailFast: false, Format: "json", Filename: invalidSamplePath, SchemaPath: schemaPath}
 		var bufNF bytes.Buffer
-		err = LintAdvanced(bytes.NewReader(invalidSampleData), optsNF, &bufNF)
+		_, err = LintAdvanced(bytes.NewReader(invalidSampleData), optsNF, &bufNF)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -352,7 +352,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	t.Run("Format: pretty", func(t *testing.T) {
 		opts := Options{Delimiter: ",", Format: "pretty", Filename: csvPath}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -365,7 +365,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	t.Run("Format: json", func(t *testing.T) {
 		opts := Options{Delimiter: ",", Format: "json", Filename: csvPath}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -379,7 +379,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 		tempDir := t.TempDir()
 		outputPath := tempDir + "/results.json"
 		opts := Options{Delimiter: ",", Format: "json", Output: outputPath, Filename: csvPath}
-		err := LintAdvanced(bytes.NewReader(csvData), opts, nil)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, nil)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -396,7 +396,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	t.Run("Filename: logical schema resolution", func(t *testing.T) {
 		opts := Options{Delimiter: ",", Format: "json", Filename: csvPath}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -410,7 +410,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	t.Run("SchemaPath: explicit", func(t *testing.T) {
 		opts := Options{Delimiter: ",", Format: "json", Filename: csvPath}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -431,7 +431,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 			Output:    outputPath,
 			Filename:  csvPath,
 		}
-		err := LintAdvanced(bytes.NewReader(csvData), opts, nil)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, nil)
 		if err != nil {
 			t.Fatalf("LintAdvanced failed: %v", err)
 		}
@@ -448,7 +448,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	t.Run("Error: invalid format", func(t *testing.T) {
 		opts := Options{Delimiter: ",", Format: "invalid", Filename: csvPath}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err == nil {
 			t.Errorf("Expected error for invalid format, got nil")
 		}
@@ -457,7 +457,7 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	t.Run("Error: missing schema", func(t *testing.T) {
 		opts := Options{Delimiter: ",", Format: "json", SchemaPath: "nonexistent.json", Filename: csvPath}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err == nil {
 			t.Errorf("Expected error for missing schema, got nil")
 		}
@@ -466,9 +466,103 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	t.Run("Error: invalid delimiter (empty string)", func(t *testing.T) {
 		opts := Options{Delimiter: "", Format: "json", Filename: csvPath}
 		var buf bytes.Buffer
-		err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
 		if err != nil {
 			t.Errorf("Should default to comma delimiter, got error: %v", err)
+		}
+	})
+}
+
+func TestLintAdvanced_InferSchema(t *testing.T) {
+	csvContent := "id,name\n1,Alice\n2,Bob\n"
+	dir := t.TempDir()
+	csvPath := dir + "/data.csv"
+	if err := os.WriteFile(csvPath, []byte(csvContent), 0644); err != nil {
+		t.Fatalf("write csv: %v", err)
+	}
+	csvData, _ := os.ReadFile(csvPath)
+
+	t.Run("InferSchema with no schema gives schema_used and schema_inferred", func(t *testing.T) {
+		opts := Options{
+			Delimiter:   ",",
+			Format:      "json",
+			Filename:    csvPath,
+			InferSchema: true,
+		}
+		var buf bytes.Buffer
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		if err != nil {
+			t.Fatalf("LintAdvanced failed: %v", err)
+		}
+		var results map[string]interface{}
+		if err := json.Unmarshal(buf.Bytes(), &results); err != nil {
+			t.Fatalf("invalid JSON: %v", err)
+		}
+		if used, _ := results["schema_used"].(bool); !used {
+			t.Errorf("expected schema_used true when InferSchema")
+		}
+		if inferred, _ := results["schema_inferred"].(bool); !inferred {
+			t.Errorf("expected schema_inferred true when InferSchema")
+		}
+		if valid, _ := results["valid"].(bool); !valid {
+			t.Errorf("expected valid true for valid CSV with inferred schema, errors: %v", results["errors"])
+		}
+	})
+
+	t.Run("InferSchema with explicit SchemaPath uses file schema not inferred", func(t *testing.T) {
+		schemaPath := "../../testdata/csvlinter.schema.json"
+		opts := Options{
+			Delimiter:   ",",
+			Format:      "json",
+			Filename:    csvPath,
+			SchemaPath:  schemaPath,
+			InferSchema: true,
+		}
+		var buf bytes.Buffer
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		if err != nil {
+			t.Fatalf("LintAdvanced failed: %v", err)
+		}
+		var results map[string]interface{}
+		if err := json.Unmarshal(buf.Bytes(), &results); err != nil {
+			t.Fatalf("invalid JSON: %v", err)
+		}
+		if used, _ := results["schema_used"].(bool); !used {
+			t.Errorf("expected schema_used true")
+		}
+		if inferred, ok := results["schema_inferred"].(bool); ok && inferred {
+			t.Errorf("expected schema_inferred false or absent when explicit schema provided")
+		}
+	})
+
+	t.Run("InferSchemaOutput writes schema file", func(t *testing.T) {
+		outPath := dir + "/inferred.schema.json"
+		opts := Options{
+			Delimiter:          ",",
+			Format:             "json",
+			Filename:           csvPath,
+			InferSchema:        true,
+			InferSchemaOutput:  outPath,
+		}
+		var buf bytes.Buffer
+		_, err := LintAdvanced(bytes.NewReader(csvData), opts, &buf)
+		if err != nil {
+			t.Fatalf("LintAdvanced failed: %v", err)
+		}
+		written, err := os.ReadFile(outPath)
+		if err != nil {
+			t.Fatalf("read inferred schema file: %v", err)
+		}
+		var schemaObj map[string]interface{}
+		if err := json.Unmarshal(written, &schemaObj); err != nil {
+			t.Fatalf("inferred schema not valid JSON: %v", err)
+		}
+		if schemaObj["$schema"] != "http://json-schema.org/draft-07/schema#" {
+			t.Errorf("expected draft-07 schema, got %v", schemaObj["$schema"])
+		}
+		props, _ := schemaObj["properties"].(map[string]interface{})
+		if props == nil || props["id"] == nil || props["name"] == nil {
+			t.Errorf("expected id and name in properties, got %v", schemaObj["properties"])
 		}
 	})
 }

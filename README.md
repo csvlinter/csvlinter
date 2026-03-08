@@ -67,6 +67,12 @@ csvlinter validate data.csv -s schema.json
 
 # Validate STDIN with JSON Schema
 cat data.csv | csvlinter validate - -s schema.json
+
+# Infer schema from data when no schema file is provided (validates against inferred types)
+csvlinter validate data.csv --infer-schema
+
+# Infer schema and write it to a file for later use
+csvlinter validate data.csv --infer-schema --infer-schema-output data.schema.json
 ```
 
 > **Schema fallback:**
@@ -161,6 +167,22 @@ When you do not specify a schema file with `--schema` or `-s`, csvlinter will at
 > **Note for STDIN:**
 > When using STDIN input (`-`), automatic schema resolution is disabled unless you provide a logical filename with `--filename`. In that case, schema resolution works as if you were validating a file with that name. You must still explicitly provide a schema file using the `--schema` or `-s` flag if no schema is found.
 
+### Infer schema
+
+When you don't have a schema file, you can ask csvlinter to **infer** a JSON Schema from the CSV data and validate against it:
+
+```bash
+# Validate using an inferred schema (types inferred from headers + sample rows)
+csvlinter validate data.csv --infer-schema
+
+# Write the inferred schema to a file (e.g. to commit and reuse later)
+csvlinter validate data.csv --infer-schema --infer-schema-output data.schema.json
+```
+
+- Inference runs only when **no** schema is provided (explicit `--schema` or resolution). Explicit schema always wins.
+- Types are inferred per column (string, integer, number, boolean); when in doubt, the inferred type is `string`.
+- The first portion of the file (up to 1000 rows by default) is used for inference; the full file is then validated.
+
 ## Examples
 
 ### Valid CSV
@@ -238,6 +260,8 @@ Errors (2):
 }
 ```
 
+When schema was inferred from data (e.g. with `--infer-schema`), the output includes `"schema_inferred": true`. This shape is **stable for tooling**: editors (e.g. VSCode extensions), CI, or other consumers can rely on `--format json` and map `errors[].line_number`, `errors[].message`, and `errors[].field` to diagnostics. The optional `schema_inferred` field indicates whether the schema was inferred rather than loaded from a file.
+
 ## Error types
 
 - **structure**: CSV format issues (wrong column count, malformed rows)
@@ -310,7 +334,7 @@ optsInMem := csvlinter.Options{
     Format:       "json",
     Filename:     "data.csv",
 }
-err = csvlinter.LintAdvanced(strings.NewReader(csvContent), optsInMem, &buf)
+results, err := csvlinter.LintAdvanced(strings.NewReader(csvContent), optsInMem, &buf)
 
 // Advanced: Use Options struct for full control
 opts := csvlinter.Options{
@@ -320,18 +344,20 @@ opts := csvlinter.Options{
     Output:      "results.json",     // Output file (leave empty for stdout/writer)
     Filename:    "data.csv",         // Logical filename for schema resolution
     SchemaPath:  "schema.json",      // Optional: explicit schema file path
+    InferSchema: true,               // Optional: infer schema from data when no schema provided
+    InferSchemaOutput: "out.json",   // Optional: write inferred schema to this path
 }
 f2, _ := os.Open("file.csv")
 var buf bytes.Buffer
-err = csvlinter.LintAdvanced(f2, opts, &buf) // Output written to buf if Output is empty
-// If opts.Output is set, results are written to that file.
+results, err := csvlinter.LintAdvanced(f2, opts, &buf) // Output written to buf if Output is empty
+// If opts.Output is set, results are written to that file. Check results.Valid for validation outcome.
 ```
 
 - `Lint(r io.Reader, name string, delimiter string)`
 - `LintWithSchema(r io.Reader, name string, delimiter string, schemaPath string)`
-- `LintAdvanced(r io.Reader, opts Options, writer io.Writer)`
+- `LintAdvanced(r io.Reader, opts Options, writer io.Writer) (*Results, error)`
 
-CSV input can be any stream (file, network, in-memory, etc.). Schema can be supplied the same way via `Options.SchemaReader` (e.g. `strings.NewReader(schemaJSON)`), or from a file path with `Options.SchemaPath` or automatic resolution from `Options.Filename`.
+CSV input can be any stream (file, network, in-memory, etc.). Schema can be supplied the same way via `Options.SchemaReader` (e.g. `strings.NewReader(schemaJSON)`), or from a file path with `Options.SchemaPath` or automatic resolution from `Options.Filename`. Set `Options.InferSchema` to infer a schema from the data when no schema is provided; use `Options.InferSchemaOutput` to write the inferred schema to a file.
 
 ## RFC 4180 Compliance
 

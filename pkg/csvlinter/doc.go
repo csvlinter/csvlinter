@@ -24,11 +24,12 @@
 //	    FailFast:     true,
 //	    Filename:     "data.csv",
 //	}
-//	err := csvlinter.LintAdvanced(csvReader, opts, &buf)
+//	results, err := csvlinter.LintAdvanced(csvReader, opts, &buf)
 //
 // Lint and LintWithSchema return a results struct with File, TotalRows, Errors,
-// Warnings, Duration, Valid, and SchemaUsed. Use LintAdvanced when you need
-// to write formatted output to a writer or file. All functions read from r until EOF or error.
+// Warnings, Duration, Valid, and SchemaUsed. LintAdvanced returns (*Results, error)
+// so callers can check results.Valid; use it when you need to write formatted output
+// to a writer or file. All functions read from r until EOF or error.
 //
 // Benchmarks and tool comparison (csvkit, csvlint): https://github.com/csvlinter/csvlinter
 package csvlinter
