@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"unicode/utf8"
 )
 
@@ -126,8 +127,161 @@ func (p *Parser) GetLineNumber() int {
 	return p.lineNumber
 }
 
-// ReadSampleFromBytes parses CSV from b and returns headers and up to maxRows non-empty data rows.
-// Used for schema inference. Returns error on empty input or invalid UTF-8.
+const (
+	// DefaultInferSamplePct is the fraction of total rows used for schema
+	// inference. Combined with the maxRows hard cap this yields
+	// k = min(N, min(maxRows, max(DefaultInferSampleFloor, ⌈N×pct⌉))).
+	DefaultInferSamplePct = 0.25
+
+	// DefaultInferSampleFloor is the minimum number of rows included in the
+	// inference sample regardless of file size, provided maxRows allows it.
+	DefaultInferSampleFloor = 5
+)
+
+// computeSampleK returns the number of head rows to use as the inference
+// sample given the total number of non-empty data rows and the hard cap.
+func computeSampleK(totalRows, maxRows int) int {
+	if totalRows == 0 {
+		return 0
+	}
+	pct := int(math.Ceil(float64(totalRows) * DefaultInferSamplePct))
+	k := max(pct, DefaultInferSampleFloor)
+	k = min(k, maxRows)
+	k = min(k, totalRows)
+	return k
+}
+
+// ReadSampleFromReader reads a head sample from r for schema inference.
+func ReadSampleFromReader(r io.Reader, delimiter string, maxRows int) (headers []string, sample [][]string, replay io.Reader, err error) {
+	if delimiter == "" {
+		return nil, nil, nil, fmt.Errorf("delimiter cannot be empty")
+	}
+
+	if rs, ok := r.(io.ReadSeeker); ok {
+		return readSampleSeekable(rs, delimiter, maxRows)
+	}
+	return readSampleStream(r, delimiter, maxRows)
+}
+
+// readSampleSeekable handles the seekable (file) case for ReadSampleFromReader.
+func readSampleSeekable(rs io.ReadSeeker, delimiter string, maxRows int) (headers []string, sample [][]string, replay io.Reader, err error) {
+	startPos, err := rs.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("seek: %w", err)
+	}
+
+	// Pass 1: count non-empty data rows.
+	rdCount := csv.NewReader(rs)
+	rdCount.Comma = rune(delimiter[0])
+	rdCount.FieldsPerRecord = -1
+	if _, err = rdCount.Read(); err != nil { // skip header
+		if err == io.EOF {
+			return nil, nil, nil, fmt.Errorf("empty input: no headers found")
+		}
+		return nil, nil, nil, fmt.Errorf("failed to read headers: %w", err)
+	}
+	totalRows := 0
+	for {
+		record, readErr := rdCount.Read()
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return nil, nil, nil, readErr
+		}
+		row := &Row{Data: record}
+		if !row.IsEmpty() {
+			totalRows++
+		}
+	}
+
+	// Seek back to start for pass 2.
+	if _, err = rs.Seek(startPos, io.SeekStart); err != nil {
+		return nil, nil, nil, fmt.Errorf("seek: %w", err)
+	}
+
+	// Pass 2: read exactly k rows.
+	k := computeSampleK(totalRows, maxRows)
+	rdSample := csv.NewReader(rs)
+	rdSample.Comma = rune(delimiter[0])
+	rdSample.FieldsPerRecord = -1
+	headers, err = rdSample.Read()
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to read headers: %w", err)
+	}
+	if !validUTF8Strings(headers) {
+		return nil, nil, nil, &EncodingError{LineNumber: 1, Err: ErrInvalidUTF8}
+	}
+	lineNum := 1
+	for len(sample) < k {
+		record, readErr := rdSample.Read()
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return nil, nil, nil, readErr
+		}
+		lineNum++
+		if !validUTF8Strings(record) {
+			return nil, nil, nil, &EncodingError{LineNumber: lineNum, Err: ErrInvalidUTF8}
+		}
+		row := &Row{Data: record}
+		if !row.IsEmpty() {
+			sample = append(sample, record)
+		}
+	}
+
+	// Seek back to start so the caller can replay the full file from rs.
+	if _, err = rs.Seek(startPos, io.SeekStart); err != nil {
+		return nil, nil, nil, fmt.Errorf("seek: %w", err)
+	}
+	return headers, sample, rs, nil
+}
+
+// readSampleStream handles non-seekable readers (STDIN, pipes) for
+// ReadSampleFromReader. N is unknown so it falls back to a head sample of up
+// to maxRows rows, buffering only those rows via TeeReader.
+func readSampleStream(r io.Reader, delimiter string, maxRows int) (headers []string, sample [][]string, replay io.Reader, err error) {
+	var captureBuf bytes.Buffer
+	tee := io.TeeReader(r, &captureBuf)
+	rd := csv.NewReader(tee)
+	rd.Comma = rune(delimiter[0])
+	rd.FieldsPerRecord = -1
+	headers, err = rd.Read()
+	if err != nil {
+		if err == io.EOF {
+			return nil, nil, nil, fmt.Errorf("empty input: no headers found")
+		}
+		return nil, nil, nil, fmt.Errorf("failed to read headers: %w", err)
+	}
+	if !validUTF8Strings(headers) {
+		return nil, nil, nil, &EncodingError{LineNumber: 1, Err: ErrInvalidUTF8}
+	}
+	lineNum := 1
+	for len(sample) < maxRows {
+		record, readErr := rd.Read()
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return nil, nil, nil, readErr
+		}
+		lineNum++
+		if !validUTF8Strings(record) {
+			return nil, nil, nil, &EncodingError{LineNumber: lineNum, Err: ErrInvalidUTF8}
+		}
+		row := &Row{Data: record}
+		if !row.IsEmpty() {
+			sample = append(sample, record)
+		}
+	}
+	// replay = captured head bytes + unconsumed remainder of the stream.
+	replay = io.MultiReader(bytes.NewReader(captureBuf.Bytes()), r)
+	return headers, sample, replay, nil
+}
+
+// ReadSampleFromBytes parses CSV from b and returns headers and up to k
+// non-empty data rows where k = computeSampleK(N, maxRows).
 func ReadSampleFromBytes(b []byte, delimiter string, maxRows int) (headers []string, sample [][]string, err error) {
 	if delimiter == "" {
 		return nil, nil, fmt.Errorf("delimiter cannot be empty")
@@ -145,21 +299,25 @@ func ReadSampleFromBytes(b []byte, delimiter string, maxRows int) (headers []str
 	if !validUTF8Strings(headers) {
 		return nil, nil, &EncodingError{LineNumber: 1, Err: ErrInvalidUTF8}
 	}
-	for len(sample) < maxRows {
+	var allRows [][]string
+	lineNum := 1
+	for {
 		record, readErr := rd.Read()
 		if readErr == io.EOF {
-			return headers, sample, nil
+			break
 		}
 		if readErr != nil {
 			return nil, nil, readErr
 		}
+		lineNum++
 		if !validUTF8Strings(record) {
-			return nil, nil, &EncodingError{LineNumber: 1 + 1 + len(sample), Err: ErrInvalidUTF8}
+			return nil, nil, &EncodingError{LineNumber: lineNum, Err: ErrInvalidUTF8}
 		}
 		row := &Row{Data: record}
 		if !row.IsEmpty() {
-			sample = append(sample, record)
+			allRows = append(allRows, record)
 		}
 	}
-	return headers, sample, nil
+	k := computeSampleK(len(allRows), maxRows)
+	return headers, allRows[:k], nil
 }

@@ -105,7 +105,7 @@ func validateAction(c *cli.Context) error {
 	}
 
 	schemaPath := c.String("schema")
-	if schemaPath == "" {
+	if schemaPath == "" && !c.Bool("infer-schema") {
 		if csvPath == "-" && filename != "" {
 			schemaPath = schema.ResolveSchema(filename)
 		} else if csvPath != "-" {
