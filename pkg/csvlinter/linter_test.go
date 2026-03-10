@@ -23,14 +23,14 @@ func TestLint(t *testing.T) {
 	}{
 		{
 			name:          "Valid CSV",
-			filePath:      "../../testdata/valid_sample.csv",
+			filePath:      "../../testdata/csv/valid_sample.csv",
 			delimiter:     ",",
 			expectedErrs:  0,
 			expectSuccess: true,
 		},
 		{
 			name:          "Invalid CSV with mismatched columns",
-			filePath:      "../../testdata/invalid_colons.csv",
+			filePath:      "../../testdata/csv/invalid_colons.csv",
 			delimiter:     ",",
 			expectedErrs:  1,
 			expectSuccess: false,
@@ -69,7 +69,7 @@ func TestLint(t *testing.T) {
 }
 
 func TestLintWithSchema(t *testing.T) {
-	schemaPath := "../../testdata/schema.json"
+	schemaPath := "../../testdata/schemas/schema.json"
 	results, err := LintWithSchema(strings.NewReader(validCSVForSchema), "test.csv", ",", schemaPath)
 	if err != nil {
 		t.Errorf("Expected no error, but got: %v", err)
@@ -83,8 +83,8 @@ func TestLintWithSchema(t *testing.T) {
 }
 
 func TestLintAdvanced(t *testing.T) {
-	csvPath := "../../testdata/valid_sample.csv"
-	invalidPath := "../../testdata/invalid_colons.csv"
+	csvPath := "../../testdata/csv/valid_sample.csv"
+	invalidPath := "../../testdata/csv/invalid_colons.csv"
 
 	csvData, err := readFileToBytes(csvPath)
 	if err != nil {
@@ -277,9 +277,9 @@ func TestLintAdvanced_SchemaFromReader(t *testing.T) {
 }
 
 func TestLintAdvanced_AllOptions(t *testing.T) {
-	csvPath := "../../testdata/valid_sample.csv"
-	semicolonPath := "../../testdata/valid_semis.csv"
-	tabPath := "../../testdata/valid_tabs.csv"
+	csvPath := "../../testdata/csv/valid_sample.csv"
+	semicolonPath := "../../testdata/csv/valid_semis.csv"
+	tabPath := "../../testdata/csv/valid_tabs.csv"
 
 	csvData, _ := readFileToBytes(csvPath)
 	semicolonData, _ := readFileToBytes(semicolonPath)
@@ -312,8 +312,8 @@ func TestLintAdvanced_AllOptions(t *testing.T) {
 	})
 
 	t.Run("FailFast: true vs false", func(t *testing.T) {
-		invalidSamplePath := "../../testdata/invalid_sample.csv"
-		schemaPath := "../../testdata/schema.json"
+		invalidSamplePath := "../../testdata/csv/invalid_sample.csv"
+		schemaPath := "../../testdata/schemas/schema.json"
 		invalidSampleData, _ := readFileToBytes(invalidSamplePath)
 		// With fail-fast
 		optsFF := Options{Delimiter: ",", FailFast: true, Format: "json", Filename: invalidSamplePath, SchemaPath: schemaPath}
@@ -506,7 +506,7 @@ func TestLintAdvanced_InferSchema(t *testing.T) {
 	})
 
 	t.Run("InferSchema with explicit SchemaPath uses file schema not inferred", func(t *testing.T) {
-		schemaPath := "../../testdata/csvlinter.schema.json"
+		schemaPath := "../../testdata/schemas/csvlinter.schema.json"
 		opts := Options{
 			Delimiter:   ",",
 			Format:      "json",
@@ -532,7 +532,7 @@ func TestLintAdvanced_InferSchema(t *testing.T) {
 	})
 
 	t.Run("invalid_sample_inferred_schema fails when age inferred as integer from sample", func(t *testing.T) {
-		csvPath := "../../testdata/invalid_sample_inferred_schema.csv"
+		csvPath := "../../testdata/csv/invalid_sample_inferred_schema.csv"
 		csvData, err := os.ReadFile(csvPath)
 		if err != nil {
 			t.Fatalf("read testdata: %v", err)

@@ -15,19 +15,19 @@ func TestValidator(t *testing.T) {
 	}{
 		{
 			name:          "Valid CSV",
-			filePath:      "../../testdata/valid_sample.csv",
+			filePath:      "../../testdata/csv/valid_sample.csv",
 			expectedErrs:  0,
 			expectSuccess: true,
 		},
 		{
 			name:          "Invalid CSV with mismatched columns",
-			filePath:      "../../testdata/invalid_colons.csv",
+			filePath:      "../../testdata/csv/invalid_colons.csv",
 			expectedErrs:  1,
 			expectSuccess: false,
 		},
 		{
 			name:          "Invalid CSV with bad quotes",
-			filePath:      "../../testdata/invalid_bad_quotes.csv",
+			filePath:      "../../testdata/csv/invalid_bad_quotes.csv",
 			expectedErrs:  1,
 			expectSuccess: false,
 		},
