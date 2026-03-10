@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -370,6 +371,56 @@ func TestReadSampleFromReader(t *testing.T) {
 		}
 		if replay == nil {
 			t.Fatal("replay must not be nil")
+		}
+	})
+
+	t.Run("stream path: sample capped at maxRows, replay delivers all 28", func(t *testing.T) {
+		// Build 28 data rows and wrap in a non-seekable reader to force readSampleStream.
+		var sb strings.Builder
+		sb.WriteString("id,value\n")
+		for i := 1; i <= 28; i++ {
+			fmt.Fprintf(&sb, "%d,%d\n", i, i*10)
+		}
+		// io.NopCloser gives io.ReadCloser (no Seek) → readSampleStream path.
+		r := io.NopCloser(strings.NewReader(sb.String()))
+
+		// maxRows=5: the stream path buffers only the header + 5 rows (O(maxRows)),
+		// then stitches the tail back via io.MultiReader for a full replay.
+		// Unlike the seekable path, N is not known up front so computeSampleK
+		// is not used; the sample is simply capped at maxRows.
+		const maxRows = 5
+		_, sample, replay, err := ReadSampleFromReader(r, ",", maxRows)
+		if err != nil {
+			t.Fatalf("ReadSampleFromReader: %v", err)
+		}
+
+		if len(sample) != maxRows {
+			t.Errorf("stream sample: want %d rows (maxRows cap), got %d", maxRows, len(sample))
+		}
+
+		// Replay must still deliver all 28 data rows despite the bounded buffer.
+		p, err := NewParser(replay, ",")
+		if err != nil {
+			t.Fatalf("NewParser on replay: %v", err)
+		}
+		if _, err := p.ReadHeaders(); err != nil {
+			t.Fatalf("ReadHeaders on replay: %v", err)
+		}
+		total := 0
+		for {
+			row, rerr := p.ReadRow()
+			if rerr == io.EOF {
+				break
+			}
+			if rerr != nil {
+				t.Fatalf("ReadRow on replay: %v", rerr)
+			}
+			if !row.IsEmpty() {
+				total++
+			}
+		}
+		if total != 28 {
+			t.Errorf("replay: want 28 total rows, got %d", total)
 		}
 	})
 }

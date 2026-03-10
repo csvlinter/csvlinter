@@ -152,6 +152,21 @@ func computeSampleK(totalRows, maxRows int) int {
 }
 
 // ReadSampleFromReader reads a head sample from r for schema inference.
+//
+// Sample-size behaviour depends on whether r is seekable:
+//
+//   - Seekable source (*os.File, bytes.Reader, …): the file is scanned once to
+//     count N non-empty data rows, then k = computeSampleK(N, maxRows) rows are
+//     returned. k is proportional to N and may be well below maxRows for small
+//     files.
+//
+//   - Non-seekable source (os.Stdin, net.Conn, pipe, …): at most maxRows rows
+//     are buffered. The sample length equals min(N, maxRows), which for a large
+//     enough stream is always maxRows.
+//
+// Identical CSV content piped via STDIN versus read from a file can therefore
+// produce different-sized samples. Callers that require a consistent sample
+// size should use ReadSampleFromBytes instead.
 func ReadSampleFromReader(r io.Reader, delimiter string, maxRows int) (headers []string, sample [][]string, replay io.Reader, err error) {
 	if delimiter == "" {
 		return nil, nil, nil, fmt.Errorf("delimiter cannot be empty")
@@ -239,8 +254,7 @@ func readSampleSeekable(rs io.ReadSeeker, delimiter string, maxRows int) (header
 }
 
 // readSampleStream handles non-seekable readers (STDIN, pipes) for
-// ReadSampleFromReader. N is unknown so it falls back to a head sample of up
-// to maxRows rows, buffering only those rows via TeeReader.
+// ReadSampleFromReader.
 func readSampleStream(r io.Reader, delimiter string, maxRows int) (headers []string, sample [][]string, replay io.Reader, err error) {
 	var captureBuf bytes.Buffer
 	tee := io.TeeReader(r, &captureBuf)
@@ -275,13 +289,19 @@ func readSampleStream(r io.Reader, delimiter string, maxRows int) (headers []str
 			sample = append(sample, record)
 		}
 	}
-	// replay = captured head bytes + unconsumed remainder of the stream.
+	// captureBuf holds the header + up to maxRows data rows.
+	// Prepend it to the unconsumed tail of r for a complete replay.
 	replay = io.MultiReader(bytes.NewReader(captureBuf.Bytes()), r)
 	return headers, sample, replay, nil
 }
 
 // ReadSampleFromBytes parses CSV from b and returns headers and up to k
 // non-empty data rows where k = computeSampleK(N, maxRows).
+//
+// Note: even though b is already fully in memory, the returned sample may
+// contain fewer than maxRows rows. computeSampleK scales k proportionally to
+// the total row count N, so small inputs yield a smaller sample. If you need
+// exactly min(N, maxRows) rows, drain the reader yourself instead.
 func ReadSampleFromBytes(b []byte, delimiter string, maxRows int) (headers []string, sample [][]string, err error) {
 	if delimiter == "" {
 		return nil, nil, fmt.Errorf("delimiter cannot be empty")

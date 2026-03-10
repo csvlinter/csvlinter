@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -19,7 +20,64 @@ type inferredSchema struct {
 }
 
 type propSchema struct {
-	Type string `json:"type"`
+	Type   string `json:"type"`
+	Format string `json:"format,omitempty"`
+}
+
+// Format-detection regexes. All patterns require full-string matches.
+var (
+	// RFC 3339 date-time: 2024-01-15T10:30:00Z or ...+05:30
+	reDateTime = regexp.MustCompile(
+		`^\d{4}-\d{2}-\d{2}[T]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$`)
+	// ISO 8601 / RFC 3339 date: 2024-01-15
+	// This is a structural heuristic: it matches the YYYY-MM-DD shape but does
+	// not validate calendar ranges, so values like 9999-99-99 are accepted.
+	reDate = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+	// RFC 3339 partial-time with optional timezone: 10:30:00, 10:30:00.123Z, 10:30:00+05:30
+	reTime = regexp.MustCompile(
+		`^\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$`)
+	// Simple email heuristic: local@domain.tld
+	reEmail = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+	// URI: scheme://...
+	reURI = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+\-.]*://\S+$`)
+)
+
+// inferColumnFormat returns a JSON Schema draft-07 format keyword for a
+// string column whose non-empty sample values all match a recognised pattern,
+// or "" if no single format applies to every value.
+func inferColumnFormat(values []string) string {
+	type formatRule struct {
+		name string
+		re   *regexp.Regexp
+	}
+	// Ordered from most-specific to least-specific so date-time is checked
+	// before plain date.
+	rules := []formatRule{
+		{"date-time", reDateTime},
+		{"date", reDate},
+		{"time", reTime},
+		{"email", reEmail},
+		{"uri", reURI},
+	}
+	for _, rule := range rules {
+		hasValue := false
+		allMatch := true
+		for _, s := range values {
+			s = strings.TrimSpace(s)
+			if s == "" {
+				continue
+			}
+			hasValue = true
+			if !rule.re.MatchString(s) {
+				allMatch = false
+				break
+			}
+		}
+		if hasValue && allMatch {
+			return rule.name
+		}
+	}
+	return ""
 }
 
 func inferColumnType(values []string) string {
@@ -90,7 +148,11 @@ func Infer(headers []string, sample [][]string) ([]byte, error) {
 	for i, h := range headers {
 		values := columnValues(sample, i)
 		t := inferColumnType(values)
-		props[h] = propSchema{Type: t}
+		var format string
+		if t == "string" {
+			format = inferColumnFormat(values)
+		}
+		props[h] = propSchema{Type: t, Format: format}
 		if hasNonEmpty(sample, i) {
 			required = append(required, h)
 		}
