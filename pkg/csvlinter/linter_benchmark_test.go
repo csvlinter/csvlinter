@@ -29,7 +29,7 @@ func BenchmarkLint_SmallCSV_NoSchema(b *testing.B) {
 
 func BenchmarkLint_SmallCSV_WithSchema(b *testing.B) {
 	data := generateCSV(1000)
-	schemaPath := "../../testdata/schema.json"
+	schemaPath := "../../testdata/schemas/schema.json"
 	for i := 0; i < b.N; i++ {
 		reader := bytes.NewReader(data)
 		_, err := LintWithSchema(reader, "small.csv", ",", schemaPath)
@@ -53,7 +53,7 @@ func BenchmarkLint_LargeCSV_NoSchema(b *testing.B) {
 
 func BenchmarkLint_LargeCSV_WithSchema(b *testing.B) {
 	data := generateCSV(1_000_000)
-	schemaPath := "../../testdata/schema.json"
+	schemaPath := "../../testdata/schemas/schema.json"
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		reader := bytes.NewReader(data)

@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -228,6 +229,200 @@ func equalSlices(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func TestComputeSampleK(t *testing.T) {
+	cases := []struct {
+		name      string
+		totalRows int
+		maxRows   int
+		wantK     int
+	}{
+		// Fewer rows than the floor — should still get all rows.
+		{"zero rows", 0, 100, 0},
+		{"1 row", 1, 100, 1},
+		{"2 rows", 2, 100, 2},
+		{"4 rows", 4, 100, 4},
+		// Floor kicks in (ceil(5*0.25)=2 < floor=5, so k=5).
+		{"5 rows", 5, 100, 5},
+		{"10 rows", 10, 100, 5},
+		// 25% ramps up past floor.
+		{"20 rows", 20, 100, 5},
+		{"28 rows (testdata file)", 28, 100, 7},
+		// Hard cap enforced.
+		{"400 rows cap=100", 400, 100, 100},
+		{"1000 rows cap=100", 1000, 100, 100},
+		// maxRows lower than would-be k — maxRows wins.
+		{"5 rows cap=2", 5, 2, 2},
+		{"100 rows cap=10", 100, 10, 10},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := computeSampleK(tc.totalRows, tc.maxRows)
+			if got != tc.wantK {
+				t.Errorf("computeSampleK(%d, %d) = %d, want %d",
+					tc.totalRows, tc.maxRows, got, tc.wantK)
+			}
+		})
+	}
+}
+
+func TestReadSampleFromReader(t *testing.T) {
+	t.Run("returns headers and sample", func(t *testing.T) {
+		r := strings.NewReader("id,name\n1,Alice\n2,Bob")
+		headers, sample, replay, err := ReadSampleFromReader(r, ",", 10)
+		if err != nil {
+			t.Fatalf("ReadSampleFromReader: %v", err)
+		}
+		if !equalSlices(headers, []string{"id", "name"}) {
+			t.Errorf("headers: got %v", headers)
+		}
+		if len(sample) != 2 {
+			t.Errorf("sample: want 2 rows, got %d", len(sample))
+		}
+		if replay == nil {
+			t.Fatal("replay must not be nil")
+		}
+	})
+
+	t.Run("respects maxRows: sample is capped, replay delivers all rows", func(t *testing.T) {
+		// 5 data rows; sample only 2; replay must still yield all 5.
+		input := "a,b\n1,x\n2,y\n3,z\n4,w\n5,v"
+		headers, sample, replay, err := ReadSampleFromReader(strings.NewReader(input), ",", 2)
+		if err != nil {
+			t.Fatalf("ReadSampleFromReader: %v", err)
+		}
+		if !equalSlices(headers, []string{"a", "b"}) {
+			t.Errorf("headers: got %v", headers)
+		}
+		if len(sample) != 2 {
+			t.Errorf("sample: want 2 rows (maxRows=2), got %d", len(sample))
+		}
+
+		// Parse the replay stream and count total data rows — must be 5.
+		p, err := NewParser(replay, ",")
+		if err != nil {
+			t.Fatalf("NewParser on replay: %v", err)
+		}
+		if _, err := p.ReadHeaders(); err != nil {
+			t.Fatalf("ReadHeaders on replay: %v", err)
+		}
+		totalRows := 0
+		for {
+			row, err := p.ReadRow()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				t.Fatalf("ReadRow on replay: %v", err)
+			}
+			if !row.IsEmpty() {
+				totalRows++
+			}
+		}
+		if totalRows != 5 {
+			t.Errorf("replay: want 5 total data rows, got %d", totalRows)
+		}
+	})
+
+	t.Run("skips empty rows in sample", func(t *testing.T) {
+		r := strings.NewReader("x,y\n1,a\n\n\n2,b")
+		_, sample, _, err := ReadSampleFromReader(r, ",", 10)
+		if err != nil {
+			t.Fatalf("ReadSampleFromReader: %v", err)
+		}
+		if len(sample) != 2 {
+			t.Errorf("sample: want 2 non-empty rows, got %d", len(sample))
+		}
+	})
+
+	t.Run("file shorter than maxRows", func(t *testing.T) {
+		r := strings.NewReader("a,b\n1,x")
+		_, sample, replay, err := ReadSampleFromReader(r, ",", 100)
+		if err != nil {
+			t.Fatalf("ReadSampleFromReader: %v", err)
+		}
+		if len(sample) != 1 {
+			t.Errorf("sample: want 1 row, got %d", len(sample))
+		}
+		if replay == nil {
+			t.Fatal("replay must not be nil even when file shorter than maxRows")
+		}
+	})
+
+	t.Run("empty input returns error", func(t *testing.T) {
+		_, _, _, err := ReadSampleFromReader(strings.NewReader(""), ",", 10)
+		if err == nil {
+			t.Fatal("expected error for empty input")
+		}
+	})
+
+	t.Run("headers only returns empty sample and full replay", func(t *testing.T) {
+		r := strings.NewReader("a,b,c")
+		headers, sample, replay, err := ReadSampleFromReader(r, ",", 10)
+		if err != nil {
+			t.Fatalf("ReadSampleFromReader: %v", err)
+		}
+		if !equalSlices(headers, []string{"a", "b", "c"}) {
+			t.Errorf("headers: got %v", headers)
+		}
+		if len(sample) != 0 {
+			t.Errorf("sample: want 0 rows, got %d", len(sample))
+		}
+		if replay == nil {
+			t.Fatal("replay must not be nil")
+		}
+	})
+
+	t.Run("stream path: sample capped at maxRows, replay delivers all 28", func(t *testing.T) {
+		// Build 28 data rows and wrap in a non-seekable reader to force readSampleStream.
+		var sb strings.Builder
+		sb.WriteString("id,value\n")
+		for i := 1; i <= 28; i++ {
+			fmt.Fprintf(&sb, "%d,%d\n", i, i*10)
+		}
+		// io.NopCloser gives io.ReadCloser (no Seek) → readSampleStream path.
+		r := io.NopCloser(strings.NewReader(sb.String()))
+
+		// maxRows=5: the stream path buffers only the header + 5 rows (O(maxRows)),
+		// then stitches the tail back via io.MultiReader for a full replay.
+		// Unlike the seekable path, N is not known up front so computeSampleK
+		// is not used; the sample is simply capped at maxRows.
+		const maxRows = 5
+		_, sample, replay, err := ReadSampleFromReader(r, ",", maxRows)
+		if err != nil {
+			t.Fatalf("ReadSampleFromReader: %v", err)
+		}
+
+		if len(sample) != maxRows {
+			t.Errorf("stream sample: want %d rows (maxRows cap), got %d", maxRows, len(sample))
+		}
+
+		// Replay must still deliver all 28 data rows despite the bounded buffer.
+		p, err := NewParser(replay, ",")
+		if err != nil {
+			t.Fatalf("NewParser on replay: %v", err)
+		}
+		if _, err := p.ReadHeaders(); err != nil {
+			t.Fatalf("ReadHeaders on replay: %v", err)
+		}
+		total := 0
+		for {
+			row, rerr := p.ReadRow()
+			if rerr == io.EOF {
+				break
+			}
+			if rerr != nil {
+				t.Fatalf("ReadRow on replay: %v", rerr)
+			}
+			if !row.IsEmpty() {
+				total++
+			}
+		}
+		if total != 28 {
+			t.Errorf("replay: want 28 total rows, got %d", total)
+		}
+	})
 }
 
 func TestReadSampleFromBytes(t *testing.T) {

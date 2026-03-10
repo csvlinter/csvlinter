@@ -20,7 +20,7 @@ func runValidateWithInfer(t *testing.T, csvPath string, extraArgs []string, want
 	var stdout, stderr bytes.Buffer
 	var exitCode int
 	app := &cli.App{
-		Commands: []*cli.Command{validateCommand},
+		Commands:  []*cli.Command{validateCommand},
 		Writer:    &stdout,
 		ErrWriter: &stderr,
 		ExitErrHandler: func(c *cli.Context, err error) {
@@ -96,7 +96,7 @@ func TestValidateCommand_InferSchema(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		var exitCode int
 		app := &cli.App{
-			Commands: []*cli.Command{validateCommand},
+			Commands:  []*cli.Command{validateCommand},
 			Writer:    &stdout,
 			ErrWriter: &stderr,
 			ExitErrHandler: func(c *cli.Context, err error) {
@@ -126,6 +126,26 @@ func TestValidateCommand_InferSchema(t *testing.T) {
 		if !res.SchemaInferred {
 			t.Errorf("expected schema_inferred true")
 		}
+	})
+
+	t.Run("--infer-schema not blocked by auto-discovered schema nearby", func(t *testing.T) {
+		dir := t.TempDir()
+		csvPath := filepath.Join(dir, "data.csv")
+		if err := os.WriteFile(csvPath, []byte("name,age\nAlice,30\nBob,25"), 0o644); err != nil {
+			t.Fatalf("write csv: %v", err)
+		}
+		strictSchema := `{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","required":["id"],"properties":{"id":{"type":"integer"}},"additionalProperties":false}`
+		if err := os.WriteFile(filepath.Join(dir, "csvlinter.schema.json"), []byte(strictSchema), 0o644); err != nil {
+			t.Fatalf("write nearby schema: %v", err)
+		}
+		runValidateWithInfer(t, csvPath, nil, 0, func(res validator.Results) {
+			if !res.SchemaInferred {
+				t.Errorf("--infer-schema bypassed by auto-discovered csvlinter.schema.json; want schema_inferred=true, got false")
+			}
+			if !res.Valid {
+				t.Errorf("want valid=true with inferred schema, got errors: %v", res.Errors)
+			}
+		})
 	})
 
 	t.Run("--infer-schema-output writes schema file", func(t *testing.T) {

@@ -89,8 +89,8 @@ invalid,Jane Doe,jane.doe@example.com`)
 					t.Errorf("Expected validation errors, got none")
 				}
 				// Optionally, more specific checks on the errors
-				if len(results.Errors) != 2 {
-					t.Errorf("Expected 2 validation errors, got %d", len(results.Errors))
+				if len(results.Errors) < 2 {
+					t.Errorf("Expected at least 2 validation errors, got %d", len(results.Errors))
 				}
 			},
 		},

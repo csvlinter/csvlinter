@@ -12,36 +12,26 @@ import (
 	"github.com/csvlinter/csvlinter/internal/validator"
 )
 
-// DefaultInferSchemaMaxRows is the default number of rows to use when inferring schema.
-const DefaultInferSchemaMaxRows = 1000
-
-// DefaultInferSchemaMaxBytes is the default max bytes to read when inferring schema (e.g. from STDIN).
-const DefaultInferSchemaMaxBytes = 10 * 1024 * 1024
+// DefaultInferSchemaMaxRows is the number of head rows sampled from the stream for schema
+// inference.
+const DefaultInferSchemaMaxRows = 100
 
 // Options configures CSV validation and output for LintAdvanced.
 // Delimiter defaults to "," and Format to "pretty" when empty.
 type Options struct {
-	Delimiter           string    // Field delimiter (e.g., ",", ";", "\t")
-	FailFast            bool     // Stop after first error
-	Format              string   // Output format: "pretty" or "json"
-	Output              string   // Output file path (if empty, write to writer)
-	Filename            string   // Logical filename for schema resolution (used if reading from stream)
-	SchemaPath          string   // Path to JSON schema file (optional)
-	SchemaReader        io.Reader // Optional: read JSON schema from this stream; takes precedence over SchemaPath when set
-	InferSchema         bool     // If true and no schema provided, infer schema from data
-	InferSchemaOutput   string   // If non-empty, write inferred schema to this path
-	InferSchemaMaxRows  int      // Max rows for inference (0 = DefaultInferSchemaMaxRows)
-	InferSchemaMaxBytes int64    // Max bytes to buffer for inference (0 = DefaultInferSchemaMaxBytes)
+	Delimiter          string    // Field delimiter (e.g., ",", ";", "\t")
+	FailFast           bool      // Stop after first error
+	Format             string    // Output format: "pretty" or "json"
+	Output             string    // Output file path (if empty, write to writer)
+	Filename           string    // Logical filename for schema resolution (used if reading from stream)
+	SchemaPath         string    // Path to JSON schema file (optional)
+	SchemaReader       io.Reader // Optional: read JSON schema from this stream; takes precedence over SchemaPath when set
+	InferSchema        bool      // If true and no schema provided, infer schema from data
+	InferSchemaOutput  string    // If non-empty, write inferred schema to this path
+	InferSchemaMaxRows int       // Head rows to sample for type inference (0 = DefaultInferSchemaMaxRows); only these rows are buffered
 }
 
 // LintAdvanced validates a CSV stream with full control over schema, format, and output.
-// CSV is read from r; formatted results are written to writer unless opts.Output is set,
-// in which case output is written to that file. Schema may be provided via
-// opts.SchemaReader (takes precedence) or opts.SchemaPath. If neither is set and
-// opts.Filename is set, schema resolution looks for <filename>.schema.json or csvlinter.schema.json
-// in the same directory, then csvlinter.schema.json in parent directories up to a project root
-// (.git or package.json) or system root.
-// Returns the validation results on success so callers can check results.Valid; on error results may be nil.
 func LintAdvanced(r io.Reader, opts Options, writer io.Writer) (*validator.Results, error) {
 	// Determine name for reporting
 	name := opts.Filename
@@ -69,7 +59,8 @@ func LintAdvanced(r io.Reader, opts Options, writer io.Writer) (*validator.Resul
 			if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
 				return nil, fmt.Errorf("Schema file '%s' does not exist", schemaPath)
 			}
-		} else if opts.Filename != "" {
+		} else if opts.Filename != "" && !opts.InferSchema {
+			// Skip auto-discovery when the caller asked for inference
 			schemaPath = schema.ResolveSchema(opts.Filename)
 		}
 		if schemaPath != "" {
@@ -82,19 +73,11 @@ func LintAdvanced(r io.Reader, opts Options, writer io.Writer) (*validator.Resul
 
 	input := r
 	if schemaValidator == nil && opts.InferSchema {
-		maxBytes := opts.InferSchemaMaxBytes
-		if maxBytes == 0 {
-			maxBytes = DefaultInferSchemaMaxBytes
-		}
 		maxRows := opts.InferSchemaMaxRows
 		if maxRows == 0 {
 			maxRows = DefaultInferSchemaMaxRows
 		}
-		buf, readErr := io.ReadAll(io.LimitReader(r, maxBytes))
-		if readErr != nil {
-			return nil, fmt.Errorf("reading input for schema inference: %w", readErr)
-		}
-		headers, sample, sampleErr := parser.ReadSampleFromBytes(buf, delimiter, maxRows)
+		headers, sample, replay, sampleErr := parser.ReadSampleFromReader(r, delimiter, maxRows)
 		if sampleErr != nil {
 			return nil, sampleErr
 		}
@@ -112,7 +95,7 @@ func LintAdvanced(r io.Reader, opts Options, writer io.Writer) (*validator.Resul
 			return nil, err
 		}
 		schemaInferred = true
-		input = bytes.NewReader(buf)
+		input = replay
 	}
 
 	// Validate format
@@ -148,7 +131,7 @@ func Lint(r io.Reader, name string, delimiter string) (*validator.Results, error
 	opts := Options{
 		Delimiter: delimiter,
 		Filename:  name,
-		Format:     "json",
+		Format:    "json",
 	}
 	var buf bytes.Buffer
 	return LintAdvanced(r, opts, &buf)

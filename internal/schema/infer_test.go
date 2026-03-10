@@ -228,3 +228,120 @@ func TestInfer_CompilesWithValidator(t *testing.T) {
 		t.Errorf("inferred schema should compile: %v", err)
 	}
 }
+
+// --- format inference tests --------------------------------------------------
+
+func inferFormat(t *testing.T, headers []string, sample [][]string, col string) string {
+	t.Helper()
+	out, err := Infer(headers, sample)
+	if err != nil {
+		t.Fatalf("Infer: %v", err)
+	}
+	var parsed map[string]interface{}
+	if err := json.Unmarshal(out, &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	props := parsed["properties"].(map[string]interface{})
+	p, ok := props[col].(map[string]interface{})
+	if !ok {
+		t.Fatalf("property %q not found", col)
+	}
+	f, _ := p["format"].(string)
+	return f
+}
+
+func TestInfer_FormatDate(t *testing.T) {
+	got := inferFormat(t,
+		[]string{"dob"},
+		[][]string{{"2024-01-15"}, {"1990-12-31"}, {"2000-06-01"}},
+		"dob",
+	)
+	if got != "date" {
+		t.Errorf("expected format=date, got %q", got)
+	}
+}
+
+func TestInfer_FormatDateTime(t *testing.T) {
+	got := inferFormat(t,
+		[]string{"ts"},
+		[][]string{{"2024-01-15T10:30:00Z"}, {"2024-06-01T00:00:00+05:30"}},
+		"ts",
+	)
+	if got != "date-time" {
+		t.Errorf("expected format=date-time, got %q", got)
+	}
+}
+
+func TestInfer_FormatTime(t *testing.T) {
+	got := inferFormat(t,
+		[]string{"t"},
+		[][]string{{"10:30:00"}, {"23:59:59"}, {"00:00:00Z"}},
+		"t",
+	)
+	if got != "time" {
+		t.Errorf("expected format=time, got %q", got)
+	}
+}
+
+func TestInfer_FormatEmail(t *testing.T) {
+	got := inferFormat(t,
+		[]string{"email"},
+		[][]string{{"alice@example.com"}, {"bob+tag@foo.org"}},
+		"email",
+	)
+	if got != "email" {
+		t.Errorf("expected format=email, got %q", got)
+	}
+}
+
+func TestInfer_FormatURI(t *testing.T) {
+	got := inferFormat(t,
+		[]string{"url"},
+		[][]string{{"https://example.com/path"}, {"http://foo.bar"}},
+		"url",
+	)
+	if got != "uri" {
+		t.Errorf("expected format=uri, got %q", got)
+	}
+}
+
+func TestInfer_FormatMixed_NoFormat(t *testing.T) {
+	// Mixed dates and plain strings → no format annotation.
+	got := inferFormat(t,
+		[]string{"col"},
+		[][]string{{"2024-01-15"}, {"not-a-date"}},
+		"col",
+	)
+	if got != "" {
+		t.Errorf("expected no format for mixed column, got %q", got)
+	}
+}
+
+func TestInfer_FormatNotAddedForNonString(t *testing.T) {
+	// Integers should never carry a format annotation.
+	got := inferFormat(t,
+		[]string{"id"},
+		[][]string{{"1"}, {"2"}, {"3"}},
+		"id",
+	)
+	if got != "" {
+		t.Errorf("expected no format for integer column, got %q", got)
+	}
+}
+
+func TestInfer_FormatCompilesWithValidator(t *testing.T) {
+	// Inferred schema with format annotations must still compile.
+	headers := []string{"dob", "email", "score"}
+	sample := [][]string{
+		{"2024-01-15", "alice@example.com", "42"},
+		{"1990-12-31", "bob@example.org", "7"},
+	}
+	out, err := Infer(headers, sample)
+	if err != nil {
+		t.Fatalf("Infer: %v", err)
+	}
+	_, err = NewValidatorFromReader(bytes.NewReader(out))
+	if err != nil {
+		t.Errorf("schema with format annotations should compile: %v", err)
+	}
+}

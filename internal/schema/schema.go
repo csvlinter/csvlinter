@@ -117,14 +117,17 @@ func (v *Validator) ValidateRow(headers []string, data []string) ([]ValidationEr
 func (v *Validator) convertValidationErrors(err *jsonschema.ValidationError, data map[string]interface{}) []ValidationError {
 	var errors []ValidationError
 
-	if err.InstanceLocation != "" {
-		// Extract field name from instance location (e.g., "/email")
+	if len(err.Causes) == 0 {
+		// Leaf node: report the actual constraint violation.
+		// InstanceLocation may be "" for root-level constraints (required,
+		// additionalProperties, etc.) or "/field" for field-level ones.
 		field := strings.TrimPrefix(err.InstanceLocation, "/")
 
-		// Find the original string value for reporting
 		originalValue := ""
-		if val, exists := data[field]; exists {
-			originalValue = fmt.Sprintf("%v", val)
+		if field != "" {
+			if val, exists := data[field]; exists {
+				originalValue = fmt.Sprintf("%v", val)
+			}
 		}
 
 		errors = append(errors, ValidationError{
@@ -132,11 +135,11 @@ func (v *Validator) convertValidationErrors(err *jsonschema.ValidationError, dat
 			Message: err.Message,
 			Value:   originalValue,
 		})
-	}
-
-	// Recursively process nested validation errors
-	for _, cause := range err.Causes {
-		errors = append(errors, v.convertValidationErrors(cause, data)...)
+	} else {
+		// Intermediate node: recurse into causes to find the leaf violations.
+		for _, cause := range err.Causes {
+			errors = append(errors, v.convertValidationErrors(cause, data)...)
+		}
 	}
 
 	return errors
