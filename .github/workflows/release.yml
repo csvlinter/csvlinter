@@ -71,3 +71,38 @@ jobs:
           path: |
             benchmark.md
             benchmarks/*.time
+
+  publish-wasm:
+    needs: [calculate-version, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Build WASM and copy wasm_exec.js
+        working-directory: csvlinter-wasm
+        run: make build
+
+      - name: Set package version
+        working-directory: csvlinter-wasm
+        run: npm version "${{ needs.calculate-version.outputs.version }}" --no-git-tag-version
+
+      - name: Install dependencies and build TypeScript
+        working-directory: csvlinter-wasm
+        run: npm install && npm run build
+
+      - name: Publish to npm
+        working-directory: csvlinter-wasm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

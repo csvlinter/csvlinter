@@ -1,0 +1,26 @@
+{
+  "name": "csvlinter-wasm",
+  "version": "0.0.0",
+  "description": "WebAssembly build of csvlinter — CSV linting entirely in the browser",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "csvlinter.wasm",
+    "wasm_exec.js"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
