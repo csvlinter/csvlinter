@@ -1,5 +1,5 @@
 {
-  "name": "csvlinter-wasm",
+  "name": "@csvlinter/wasm",
   "version": "0.0.0",
   "description": "WebAssembly build of csvlinter — CSV linting entirely in the browser",
   "type": "module",
