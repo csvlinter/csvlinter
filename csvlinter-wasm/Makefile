@@ -9,7 +9,7 @@ WASM_EXEC_CANDIDATES := \
 
 # Build WASM and copy wasm_exec.js — used by CI before npm publish
 build:
-	GOOS=js GOARCH=wasm go build -o csvlinter.wasm ../cmd/wasm
+	GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o csvlinter.wasm ../cmd/wasm
 	@for f in $(WASM_EXEC_CANDIDATES); do \
 		if [ -f "$$f" ]; then cp "$$f" wasm_exec.js && echo "Copied $$f"; break; fi; \
 	done
